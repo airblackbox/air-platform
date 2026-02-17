@@ -1,0 +1,142 @@
+# AIR Platform — Full Stack
+# Spins up the complete trust layer: Gateway → Episode Store → Eval Harness → Policy Engine
+#
+# Usage:
+#   docker compose up --build
+#   docker compose down -v
+#
+# Ports:
+#   8080  — AIR Gateway (OpenAI-compatible proxy)
+#   8100  — Episode Store API
+#   8200  — Policy Engine API
+#   9000  — MinIO S3 API
+#   9001  — MinIO Console
+#   4317  — OTel Collector gRPC
+#   16686 — Jaeger UI
+
+services:
+  # --- Infrastructure ---
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 2s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: ["/bin/sh", "-c"]
+    command: >
+      "mc alias set local http://minio:9000 minioadmin minioadmin &&
+       mc mb -p local/airblackbox || true &&
+       echo 'MinIO bucket ready'"
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.57
+    ports:
+      - "16686:16686"
+      - "14250:14250"
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+
+  # --- Core Services ---
+  gateway:
+    build:
+      context: ../airblackbox-mvp
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      LISTEN_ADDR: ":8080"
+      PROVIDER_URL: "https://api.openai.com"
+      VAULT_ENDPOINT: "minio:9000"
+      VAULT_ACCESS_KEY: "minioadmin"
+      VAULT_SECRET_KEY: "minioadmin"
+      VAULT_BUCKET: "airblackbox"
+      VAULT_USE_SSL: "false"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "collector:4317"
+      RUNS_DIR: "/data/runs"
+      EPISODE_STORE_URL: "http://episode-store:8100"
+    volumes:
+      - runs:/data/runs
+    depends_on:
+      minio-init:
+        condition: service_completed_successfully
+      collector:
+        condition: service_started
+
+  episode-store:
+    build:
+      context: ../agent-episode-store
+      dockerfile: Dockerfile
+    ports:
+      - "8100:8100"
+    environment:
+      EPISODE_DB_PATH: "/data/episodes.db"
+      EPISODE_HOST: "0.0.0.0"
+      EPISODE_PORT: "8100"
+    volumes:
+      - episode-data:/data
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import httpx; httpx.get('http://localhost:8100/v1/health').raise_for_status()"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+
+  policy-engine:
+    build:
+      context: ../agent-policy-engine
+      dockerfile: Dockerfile
+    ports:
+      - "8200:8200"
+    environment:
+      EPISODE_STORE_URL: "http://episode-store:8100"
+      POLICY_HOST: "0.0.0.0"
+      POLICY_PORT: "8200"
+    depends_on:
+      episode-store:
+        condition: service_healthy
+
+  eval-harness:
+    build:
+      context: ../eval-harness
+      dockerfile: Dockerfile
+    environment:
+      EPISODE_STORE_URL: "http://episode-store:8100"
+      GATEWAY_URL: "http://gateway:8080"
+      POLICY_ENGINE_URL: "http://policy-engine:8200"
+    depends_on:
+      episode-store:
+        condition: service_healthy
+    # Eval harness runs as CLI tasks, stays idle
+    command: ["tail", "-f", "/dev/null"]
+
+  collector:
+    build:
+      context: ../airblackbox-mvp/collector
+      dockerfile: Dockerfile
+    ports:
+      - "4317:4317"
+      - "4318:4318"
+    depends_on:
+      - jaeger
+
+volumes:
+  minio-data:
+  runs:
+  episode-data:
