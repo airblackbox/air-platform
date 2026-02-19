@@ -138,9 +138,9 @@ processors:
 | Repository | Description | Demo |
 |---|---|---|
 | [**gateway**](https://github.com/airblackbox/gateway) | OpenAI-compatible reverse proxy — records every LLM call as an OpenTelemetry trace | [View Demo](https://htmlpreview.github.io/?https://github.com/airblackbox/gateway/blob/main/demo.html) |
-| [**agent-episode-store**](https://github.com/airblackbox/agent-episode-store) | Groups raw traces into replayable task-level episodes (SQLite + S3) | — |
-| [**agent-policy-engine**](https://github.com/airblackbox/agent-policy-engine) | Risk-tiered autonomy, kill switches, and trust scoring | — |
-| [**air-platform**](https://github.com/airblackbox/air-platform) | Docker Compose orchestration — one command to run the full stack | — |
+| [**agent-episode-store**](https://github.com/airblackbox/agent-episode-store) | Groups raw traces into replayable task-level episodes (SQLite + S3) | [View Demo](https://htmlpreview.github.io/?https://github.com/airblackbox/agent-episode-store/blob/main/demo.html) |
+| [**agent-policy-engine**](https://github.com/airblackbox/agent-policy-engine) | Risk-tiered autonomy, kill switches, and trust scoring | [View Demo](https://htmlpreview.github.io/?https://github.com/airblackbox/agent-policy-engine/blob/main/demo.html) |
+| [**air-platform**](https://github.com/airblackbox/air-platform) | Docker Compose orchestration — one command to run the full stack | [View Demo](https://htmlpreview.github.io/?https://github.com/airblackbox/air-platform/blob/main/demo.html) |
 
 ### Instrumentation
 
