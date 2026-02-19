@@ -18,6 +18,20 @@
 
 ---
 
+## Interactive Demos
+
+Explore each core component without installing anything:
+
+| Component | What It Shows | Try It |
+|---|---|---|
+| **Gateway** | OpenAI-compatible proxy that records every LLM call as an OTel trace | [Launch Demo →](https://htmlpreview.github.io/?https://github.com/airblackbox/gateway/blob/main/demo.html) |
+| **Episode Store** | Groups raw traces into replayable task-level episodes | [Launch Demo →](https://htmlpreview.github.io/?https://github.com/airblackbox/agent-episode-store/blob/main/demo.html) |
+| **Policy Engine** | Risk-tiered autonomy, kill switches, and trust scoring | [Launch Demo →](https://htmlpreview.github.io/?https://github.com/airblackbox/agent-policy-engine/blob/main/demo.html) |
+| **Platform** | Full stack in one command — Docker Compose orchestration | [Launch Demo →](https://htmlpreview.github.io/?https://github.com/airblackbox/air-platform/blob/main/demo.html) |
+| **OTel Collector** | Redaction, cost metrics, and loop detection processor | [Launch Demo →](https://htmlpreview.github.io/?https://github.com/airblackbox/otel-collector-genai/blob/main/demo.html) |
+
+---
+
 ## The Problem
 
 AI agents are making real decisions — calling APIs, executing code, moving money, accessing databases. But when something goes wrong, teams cannot reconstruct what happened or why.
