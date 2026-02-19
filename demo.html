@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AIR Blackbox — Platform Demo</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0a0a0f;color:#e0e0e0;overflow:hidden;height:100vh}
+.container{max-width:1100px;margin:0 auto;padding:20px;height:100vh;display:flex;flex-direction:column}
+header{text-align:center;padding:12px 0;flex-shrink:0}
+header h1{font-size:1.6em;color:#fff}header h1 span{color:#3b82f6}
+header p{color:#888;font-size:0.85em}
+.badge{display:inline-block;background:#1a1a2e;border:1px solid #3b82f633;color:#3b82f6;padding:2px 10px;border-radius:12px;font-size:0.75em;margin-top:4px}
+.slide-area{flex:1;display:flex;flex-direction:column;justify-content:center;overflow:hidden}
+.slide{display:none;animation:fadeIn 0.4s ease}.slide.active{display:flex;flex-direction:column;gap:14px}
+@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.slide-title{font-size:1.15em;color:#3b82f6;font-weight:600}
+.slide-subtitle{color:#aaa;font-size:0.85em;margin-top:-8px}
+.card{background:#111827;border:1px solid #1e293b;border-radius:10px;padding:16px;overflow:hidden}
+.card-header{font-size:0.8em;color:#3b82f6;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;font-weight:600}
+pre{background:#0d1117;border:1px solid #1e293b;border-radius:8px;padding:12px;font-size:0.78em;line-height:1.5;overflow-x:auto;color:#c9d1d9;font-family:'SF Mono',Monaco,monospace}
+.k{color:#ff7b72}.s{color:#a5d6ff}.n{color:#d2a8ff}.c{color:#8b949e;font-style:italic}.p{color:#79c0ff}.v{color:#ffa657}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.anim-item{opacity:0;transform:translateX(-10px);transition:all 0.4s}.anim-item.show{opacity:1;transform:translateX(0)}
+.service-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.service{background:#0d1117;border:1px solid #1e293b;border-radius:8px;padding:10px;text-align:center;transition:all 0.3s}
+.service.running{border-color:#22c55e;background:#0a1a0a}
+.service.starting{border-color:#f59e0b;background:#1a1500}
+.service .svc-name{font-size:0.8em;font-weight:600;color:#fff}
+.service .svc-port{font-size:0.65em;color:#888;font-family:monospace}
+.service .svc-status{font-size:0.7em;margin-top:4px}
+.status-dot{display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:4px}
+.dot-green{background:#22c55e}.dot-yellow{background:#f59e0b}.dot-gray{background:#666}
+.terminal{background:#0d1117;border:1px solid #1e293b;border-radius:10px;padding:14px;font-family:'SF Mono',Monaco,monospace;font-size:0.78em;line-height:1.6}
+.terminal .prompt{color:#3b82f6}.terminal .cmd{color:#fff}.terminal .out{color:#888}.terminal .ok{color:#22c55e}.terminal .warn{color:#f59e0b}
+.arch-row{display:flex;align-items:center;gap:8px;margin:4px 0;flex-wrap:wrap}
+.arch-box{background:#1a1a2e;border:1px solid #333;border-radius:6px;padding:6px 12px;font-size:0.75em;text-align:center;min-width:100px}
+.arch-box.highlight{border-color:#3b82f6;box-shadow:0 0 8px #3b82f633}
+.arch-arrow{color:#3b82f6;font-size:1em}
+.metric-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.metric{background:#0d1117;border:1px solid #1e293b;border-radius:8px;padding:10px;text-align:center}
+.metric .num{font-size:1.3em;font-weight:700;color:#3b82f6}.metric .lbl{font-size:0.7em;color:#888;margin-top:2px}
+nav{display:flex;justify-content:center;gap:8px;padding:10px 0;flex-shrink:0;align-items:center}
+nav button{background:#1a1a2e;border:1px solid #333;color:#e0e0e0;padding:6px 18px;border-radius:6px;cursor:pointer;font-size:0.8em;transition:all 0.2s}
+nav button:hover{border-color:#3b82f6;color:#3b82f6}
+nav button:disabled{opacity:0.3;cursor:not-allowed}
+nav .counter{color:#888;font-size:0.8em;min-width:60px;text-align:center}
+</style>
+</head>
+<body>
+<div class="container">
+<header>
+<h1><span>AIR Blackbox</span> — Platform</h1>
+<p>Full stack in one command — Docker Compose orchestration</p>
+<span class="badge">Interactive Demo</span>
+</header>
+<div class="slide-area">
+
+<!-- Slide 1: One Command -->
+<div class="slide" id="s1">
+<div class="slide-title">One Command to Run Everything</div>
+<div class="slide-subtitle">From zero to full observability stack in under 60 seconds</div>
+<div class="terminal">
+<div class="anim-item"><span class="prompt">$</span> <span class="cmd">git clone https://github.com/airblackbox/air-platform.git</span></div>
+<div class="anim-item"><span class="out">Cloning into 'air-platform'... done.</span></div>
+<div class="anim-item"><span class="prompt">$</span> <span class="cmd">cd air-platform</span></div>
+<div class="anim-item"><span class="prompt">$</span> <span class="cmd">cp .env.example .env</span></div>
+<div class="anim-item"><span class="prompt">$</span> <span class="cmd">echo "OPENAI_API_KEY=sk-..." >> .env</span></div>
+<div class="anim-item"><span class="prompt">$</span> <span class="cmd">make up</span></div>
+<div class="anim-item"><span class="out">Creating network "air-platform_default"...</span></div>
+<div class="anim-item"><span class="ok">✓ gateway          started  (0.8s)</span></div>
+<div class="anim-item"><span class="ok">✓ episode-store     started  (1.1s)</span></div>
+<div class="anim-item"><span class="ok">✓ policy-engine     started  (0.9s)</span></div>
+<div class="anim-item"><span class="ok">✓ otel-collector    started  (1.3s)</span></div>
+<div class="anim-item"><span class="ok">✓ jaeger            started  (2.1s)</span></div>
+<div class="anim-item"><span class="ok">✓ prometheus        started  (1.8s)</span></div>
+<div class="anim-item"><span class="out"> </span></div>
+<div class="anim-item"><span class="ok">All 6 services running. Stack ready in 8.0s</span></div>
+</div>
+</div>
+
+<!-- Slide 2: Services -->
+<div class="slide" id="s2">
+<div class="slide-title">What's in the Stack</div>
+<div class="slide-subtitle">6 services that work together — each doing one job well</div>
+<div class="service-grid">
+<div class="service running anim-item">
+<div class="svc-name">Gateway</div>
+<div class="svc-port">:8080 → OpenAI-compatible</div>
+<div class="svc-status"><span class="status-dot dot-green"></span><span style="color:#22c55e">running</span></div>
+</div>
+<div class="service running anim-item">
+<div class="svc-name">Episode Store</div>
+<div class="svc-port">:4318 (OTLP) · :8081 (API)</div>
+<div class="svc-status"><span class="status-dot dot-green"></span><span style="color:#22c55e">running</span></div>
+</div>
+<div class="service running anim-item">
+<div class="svc-name">Policy Engine</div>
+<div class="svc-port">:9090 (Policy API)</div>
+<div class="svc-status"><span class="status-dot dot-green"></span><span style="color:#22c55e">running</span></div>
+</div>
+<div class="service running anim-item">
+<div class="svc-name">OTel Collector</div>
+<div class="svc-port">:4317 (gRPC) · :4318 (HTTP)</div>
+<div class="svc-status"><span class="status-dot dot-green"></span><span style="color:#22c55e">running</span></div>
+</div>
+<div class="service running anim-item">
+<div class="svc-name">Jaeger</div>
+<div class="svc-port">:16686 (UI)</div>
+<div class="svc-status"><span class="status-dot dot-green"></span><span style="color:#22c55e">running</span></div>
+</div>
+<div class="service running anim-item">
+<div class="svc-name">Prometheus</div>
+<div class="svc-port">:9091 (UI)</div>
+<div class="svc-status"><span class="status-dot dot-green"></span><span style="color:#22c55e">running</span></div>
+</div>
+</div>
+<div class="card">
+<div class="card-header">Data flow</div>
+<div class="arch-row">
+<div class="arch-box highlight anim-item">Your Agent<br><small style="color:#888">Any framework</small></div>
+<div class="arch-arrow anim-item">→</div>
+<div class="arch-box highlight anim-item">Gateway<br><small style="color:#888">:8080</small></div>
+<div class="arch-arrow anim-item">→</div>
+<div class="arch-box anim-item">Policy Engine<br><small style="color:#888">evaluate</small></div>
+<div class="arch-arrow anim-item">→</div>
+<div class="arch-box anim-item">OTel Collector<br><small style="color:#888">redact + metrics</small></div>
+<div class="arch-arrow anim-item">→</div>
+<div class="arch-box anim-item">Episode Store<br><small style="color:#888">+ Jaeger</small></div>
+</div>
+</div>
+</div>
+
+<!-- Slide 3: Docker Compose -->
+<div class="slide" id="s3">
+<div class="slide-title">docker-compose.yaml</div>
+<div class="slide-subtitle">The full orchestration configuration</div>
+<div class="card">
+<pre><span class="k">version</span>: <span class="s">"3.9"</span>
+
+<span class="k">services</span>:
+  <span class="n">gateway</span>:
+    <span class="k">image</span>: <span class="s">ghcr.io/airblackbox/gateway:latest</span>
+    <span class="k">ports</span>: [<span class="s">"8080:8080"</span>]
+    <span class="k">environment</span>:
+      <span class="v">UPSTREAM_URL</span>: <span class="s">https://api.openai.com</span>
+      <span class="v">OTEL_EXPORTER_ENDPOINT</span>: <span class="s">http://otel-collector:4317</span>
+      <span class="v">POLICY_ENGINE_URL</span>: <span class="s">http://policy-engine:9090</span>
+      <span class="v">OPENAI_API_KEY</span>: <span class="s">${OPENAI_API_KEY}</span>
+
+  <span class="n">policy-engine</span>:
+    <span class="k">image</span>: <span class="s">ghcr.io/airblackbox/agent-policy-engine:latest</span>
+    <span class="k">ports</span>: [<span class="s">"9090:9090"</span>]
+    <span class="k">volumes</span>: [<span class="s">"./policies.yaml:/config/policies.yaml:ro"</span>]
+
+  <span class="n">otel-collector</span>:
+    <span class="k">image</span>: <span class="s">ghcr.io/airblackbox/otel-collector-genai:latest</span>
+    <span class="k">ports</span>: [<span class="s">"4317:4317"</span>, <span class="s">"4318:4318"</span>]
+    <span class="k">volumes</span>: [<span class="s">"./otelcol-config.yaml:/etc/otelcol/config.yaml:ro"</span>]
+
+  <span class="n">episode-store</span>:
+    <span class="k">image</span>: <span class="s">ghcr.io/airblackbox/agent-episode-store:latest</span>
+    <span class="k">ports</span>: [<span class="s">"8081:8080"</span>]
+
+  <span class="n">jaeger</span>:
+    <span class="k">image</span>: <span class="s">jaegertracing/all-in-one:1.54</span>
+    <span class="k">ports</span>: [<span class="s">"16686:16686"</span>]
+
+  <span class="n">prometheus</span>:
+    <span class="k">image</span>: <span class="s">prom/prometheus:v2.49.1</span>
+    <span class="k">ports</span>: [<span class="s">"9091:9090"</span>]
+    <span class="k">volumes</span>: [<span class="s">"./prometheus.yaml:/etc/prometheus/prometheus.yml:ro"</span>]</pre>
+</div>
+</div>
+
+<!-- Slide 4: Usage -->
+<div class="slide" id="s4">
+<div class="slide-title">Using the Stack</div>
+<div class="slide-subtitle">Point your agent at localhost:8080 — everything else is automatic</div>
+<div class="two-col">
+<div class="card">
+<div class="card-header">Python (OpenAI SDK)</div>
+<pre><span class="k">import</span> openai
+
+<span class="c"># Just change the base_url — that's it</span>
+client = openai.OpenAI(
+    base_url=<span class="s">"http://localhost:8080/v1"</span>,
+    api_key=<span class="s">"your-key"</span>  <span class="c"># or set in .env</span>
+)
+
+response = client.chat.completions.create(
+    model=<span class="s">"gpt-4o"</span>,
+    messages=[{
+        <span class="s">"role"</span>: <span class="s">"user"</span>,
+        <span class="s">"content"</span>: <span class="s">"Research competitor pricing"</span>
+    }]
+)
+
+<span class="c"># The gateway automatically:</span>
+<span class="c"># 1. Checks policy engine</span>
+<span class="c"># 2. Forwards to OpenAI</span>
+<span class="c"># 3. Emits OTel traces</span>
+<span class="c"># 4. Groups into episodes</span></pre>
+</div>
+<div class="card">
+<div class="card-header">What you get (no extra code)</div>
+<pre><span class="c"># Jaeger UI → localhost:16686</span>
+Traces per request:
+  - LLM call duration
+  - Token counts
+  - Model used
+  - Redacted prompts/completions
+
+<span class="c"># Prometheus → localhost:9091</span>
+Metrics:
+  - genai.request.duration
+  - genai.token.usage
+  - genai.cost.estimated
+  - genai.policy.decisions
+
+<span class="c"># Episode Store → localhost:8081</span>
+Episodes:
+  - Task-level grouping
+  - Replay capability
+  - Cost attribution
+  - Risk classification</pre>
+</div>
+</div>
+</div>
+
+<!-- Slide 5: Make Commands -->
+<div class="slide" id="s5">
+<div class="slide-title">Makefile: Common Operations</div>
+<div class="slide-subtitle">Convenient shortcuts for day-to-day operations</div>
+<div class="terminal">
+<div class="anim-item"><span class="prompt">$</span> <span class="cmd">make help</span></div>
+<div class="anim-item"><span class="out"> </span></div>
+<div class="anim-item"><span class="ok">  AIR Blackbox Platform Commands</span></div>
+<div class="anim-item"><span class="out"> </span></div>
+<div class="anim-item"><span class="out">  make up            Start all services</span></div>
+<div class="anim-item"><span class="out">  make down          Stop all services</span></div>
+<div class="anim-item"><span class="out">  make restart       Restart all services</span></div>
+<div class="anim-item"><span class="out">  make logs          Tail logs from all services</span></div>
+<div class="anim-item"><span class="out">  make status        Show service health</span></div>
+<div class="anim-item"><span class="out">  make test          Run smoke tests against the stack</span></div>
+<div class="anim-item"><span class="out">  make episodes      List recent episodes</span></div>
+<div class="anim-item"><span class="out">  make policies      Show active policies</span></div>
+<div class="anim-item"><span class="out">  make kill AGENT=x  Trigger kill switch for agent</span></div>
+<div class="anim-item"><span class="out">  make clean         Remove all data and containers</span></div>
+</div>
+<div class="metric-row" style="margin-top:12px">
+<div class="metric anim-item"><div class="num" style="color:#22c55e">6</div><div class="lbl">Services</div></div>
+<div class="metric anim-item"><div class="num" style="color:#3b82f6">4</div><div class="lbl">Ports Exposed</div></div>
+<div class="metric anim-item"><div class="num" style="color:#f59e0b">~8s</div><div class="lbl">Startup Time</div></div>
+<div class="metric anim-item"><div class="num" style="color:#d2a8ff">1</div><div class="lbl">Command</div></div>
+</div>
+</div>
+
+<!-- Slide 6: Architecture Overview -->
+<div class="slide" id="s6">
+<div class="slide-title">Full Architecture</div>
+<div class="slide-subtitle">How all components work together</div>
+<div class="card">
+<pre style="font-size:0.72em;line-height:1.4">
+  <span class="s">Your Agent</span>  ──HTTP──▶  <span class="p">Gateway :8080</span>  ──policy check──▶  <span class="k">Policy Engine :9090</span>
+                              │                                    │
+                              │ (if allowed)                       │ trust scores
+                              ▼                                    │ kill switches
+                         <span class="s">OpenAI API</span>                                │
+                              │                                    │
+                              │ response                           │
+                              ▼                                    │
+                        <span class="p">Gateway</span> ──OTLP──▶  <span class="n">OTel Collector :4317</span>  │
+                                                  │                │
+                                    ┌─────────────┼────────────────┘
+                                    │             │
+                                    ▼             ▼
+                             <span class="v">Episode Store</span>   <span class="v">Jaeger :16686</span>
+                               :8081           (trace UI)
+                                    │
+                                    ▼
+                             <span class="v">Prometheus :9091</span>
+                              (metrics / alerts)
+</pre>
+</div>
+<div class="card">
+<div class="card-header">Get started</div>
+<pre><span class="c"># Clone and run — takes under 60 seconds</span>
+git clone https://github.com/airblackbox/air-platform.git && cd air-platform
+cp .env.example .env && <span class="c"># add your OPENAI_API_KEY</span>
+make up
+
+<span class="c"># Then point any OpenAI-compatible client at localhost:8080</span>
+<span class="c"># Open Jaeger at localhost:16686 to see traces</span>
+<span class="c"># Open Prometheus at localhost:9091 for metrics</span></pre>
+</div>
+</div>
+
+</div>
+<nav>
+<button id="prev" onclick="go(-1)">← Prev</button>
+<span class="counter"><span id="cur">1</span> / <span id="tot">6</span></span>
+<button id="next" onclick="go(1)">Next →</button>
+</nav>
+</div>
+<script>
+let current=0;const slides=document.querySelectorAll('.slide'),total=slides.length;
+function show(n){slides.forEach(s=>s.classList.remove('active'));slides[n].classList.add('active');
+document.getElementById('cur').textContent=n+1;document.getElementById('tot').textContent=total;
+document.getElementById('prev').disabled=n===0;document.getElementById('next').disabled=n===total-1;
+setTimeout(()=>{const items=slides[n].querySelectorAll('.anim-item');items.forEach((el,i)=>{setTimeout(()=>el.classList.add('show'),i*120)})},100)}
+function go(d){const n=current+d;if(n>=0&&n<total){current=n;show(n)}}
+document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'||e.key===' ')go(1);if(e.key==='ArrowLeft')go(-1)});
+show(0);
+</script>
+</body>
+</html>
