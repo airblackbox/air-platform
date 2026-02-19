@@ -1,130 +1,215 @@
-# AIR Platform
+<p align="center">
+  <img src="https://raw.githubusercontent.com/airblackbox/gateway/main/logo.png" alt="AIR Blackbox" width="120" />
+</p>
 
-**One command to run the complete AI accountability stack.**
+<h1 align="center">AIR Blackbox</h1>
+<h3 align="center">The flight recorder for autonomous AI agents</h3>
 
-The AIR Platform orchestrates all four layers of the trust infrastructure:
+<p align="center">
+  <strong>Record every decision. Replay every incident. Enforce every policy.</strong>
+</p>
+
+<p align="center">
+  <a href="https://github.com/airblackbox"><img src="https://img.shields.io/badge/license-Apache--2.0-blue" alt="License" /></a>
+  <a href="https://github.com/airblackbox"><img src="https://img.shields.io/badge/status-alpha-orange" alt="Status" /></a>
+  <a href="https://github.com/airblackbox"><img src="https://img.shields.io/badge/go-1.22+-00ADD8" alt="Go" /></a>
+  <a href="https://github.com/airblackbox"><img src="https://img.shields.io/badge/python-3.10+-3776AB" alt="Python" /></a>
+</p>
+
+---
+
+## The Problem
+
+AI agents are making real decisions — calling APIs, executing code, moving money, accessing databases. But when something goes wrong, teams cannot reconstruct what happened or why.
+
+There is no audit trail. No replay capability. No policy enforcement layer.
+
+Every team re-invents logging. Secrets leak into trace backends. Runaway agents burn through budgets undetected. And when regulators ask "what did your AI do? — nobody has a good answer.
+
+## What AIR Blackbox Does
+
+AIR Blackbox is the missing infrastructure layer between your AI agents and your observability stack.
 
 ```
-┌─────────────────────────────────────────────────────┐
-│                   AIR Platform                       │
-│                                                      │
-│  ┌──────────┐  ┌──────────────┐  ┌──────────────┐  │
-│  │ Gateway   │→│ Episode Store │→│ Eval Harness  │  │
-│  │ :8080     │  │ :8100        │  │ (CLI)        │  │
-│  └──────────┘  └──────────────┘  └──────────────┘  │
-│       │              │                    │          │
-│       ▼              ▼                    ▼          │
-│  ┌──────────┐  ┌──────────────┐  ┌──────────────┐  │
-│  │ MinIO     │  │ SQLite       │  │ Policy Engine│  │
-│  │ :9000     │  │ (embedded)   │  │ :8200        │  │
-│  └──────────┘  └──────────────┘  └──────────────┘  │
-│       │                                              │
-│       ▼                                              │
-│  ┌──────────┐  ┌──────────────┐                     │
-│  │ Collector │  │ Jaeger UI    │                     │
-│  │ :4317     │  │ :16686       │                     │
-│  └──────────┘  └──────────────┘                     │
-└─────────────────────────────────────────────────────┘
+Your Agent → AIR Blackbox → Safe, Auditable Telemetry
+```
+
+It provides four capabilities:
+
+| Capability | What it does |
+|---|---|
+| **Record** | Captures every LLM call, tool invocation, and decision as a structured trace |
+| **Replay** | Groups traces into task-level episodes that can be replayed and investigated |
+| **Enforce** | Applies risk-tiered policies, kill switches, and trust scoring in real time |
+| **Audit** | Redacts secrets, normalizes metrics, and produces compliance-ready telemetry |
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        YOUR AI AGENTS                            │
+│  (OpenAI · LangChain · CrewAI · AutoGen · Any LLM framework)   │
+└─────────────────────┬───────────────────────────────────────────┘
+                      │ OTLP / HTTP
+                      ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                     INSTRUMENTATION LAYER                       │
+│                                                                 │
+│  ┌──────────────┐ ┌──────────────┐ ┌──────────────────────────┐│
+│  │  Python SDK  │ │ Trust Plugins│ │  Framework Connectors    ││
+│  │  (pip)       │ │ (4 frameworks│ │  (CrewAI, LangChain,     ││
+│  │              │ │  supported)  │ │   AutoGen, OpenAI Agents)││
+│  └──────────────┘ └──────────────┘ └──────────────────────────┘│
+└─────────────────────┬───────────────────────────────────────────┘
+                      │
+                      ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                      CORE RUNTIME                               │
+│                                                                 │
+│  ┌──────────────┐ ┌──────────────┐ ┌──────────────────────────┐│
+│  │   Gateway    │ │Episode Store │ │    Policy Engine         ││
+│  │  (Go proxy)  │ │ (SQLite +    │ │  (risk tiers, kill       ││
+│  │              │ │  S3 vault)   │ │   switches, trust score) ││
+│  └──────┬───────┘ └──────────────┘ └──────────────────────────┘│
+│         │                                                       │
+│         ▼                                                       │
+│  ┌──────────────┐ ┌──────────────┐ ┌──────────────────────────┐│
+│  │ OTel Genai   │ │  Prompt      │ │  Semantic Normalizer     ││
+│  │ Processor    │ │  Vault       │ │  (gen_ai.* → standard)   ││
+│  │ (redact,     │ │ (encrypted   │ │                          ││
+│  │  metrics,    │ │  storage)    │ │                          ││
+│  │  loop detect)│ │              │ │                          ││
+│  └──────────────┘ └──────────────┘ └──────────────────────────┘│
+└─────────────────────┬───────────────────────────────────────────┘
+                      │
+                      ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    OBSERVABILITY BACKENDS                        │
+│          Jaeger · Prometheus · Grafana · Datadog · Any OTLP     │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
 ## Quick Start
 
-```bash
-# Clone with sibling repos
-git clone https://github.com/nostalgicskinco/air-platform.git
-git clone https://github.com/nostalgicskinco/air-blackbox-gateway.git ../airblackbox-mvp
-git clone https://github.com/nostalgicskinco/agent-episode-store.git ../agent-episode-store
-git clone https://github.com/nostalgicskinco/eval-harness.git ../eval-harness
-git clone https://github.com/nostalgicskinco/agent-policy-engine.git ../agent-policy-engine
+**Option 1: Full stack (Docker Compose)**
 
-# Start everything
+```bash
+git clone https://github.com/airblackbox/air-platform.git
 cd air-platform
-cp .env.example .env
-# Edit .env with your OPENAI_API_KEY
-make up
-
-# Check all services are running
-make status
+cp .env.example .env    # add your OPENAI_API_KEY
+make up                 # starts Gateway + Episode Store + Policy Engine + Jaeger + Prometheus
 ```
 
-## Services
-
-| Service | Port | Description |
-|---------|------|-------------|
-| **Gateway** | 8080 | OpenAI-compatible reverse proxy, records AIR audit trails |
-| **Episode Store** | 8100 | Groups AIR records into replayable task-level episodes |
-| **Policy Engine** | 8200 | Risk-tiered autonomy, kill switches, trust scoring |
-| **Eval Harness** | — | CLI tool for replaying and scoring episodes |
-| **MinIO** | 9000/9001 | S3-compatible vault for prompts and completions |
-| **OTel Collector** | 4317/4318 | Telemetry pipeline (normalize, vault, redact) |
-| **Jaeger** | 16686 | Distributed tracing UI |
-
-## Commands
+**Option 2: Python SDK only**
 
 ```bash
-make up        # Start the full stack
-make down      # Stop all services
-make clean     # Stop and delete all data
-make test      # Run integration tests
-make logs      # Tail all service logs
-make status    # Health check all services
+pip install air-blackbox-sdk
 ```
 
-## Integration Tests
+```python
+from air_blackbox import AIRBlackbox
 
-The test suite verifies cross-service communication:
-
-- **IT-1: Health** — All services respond to health checks
-- **IT-2: Episode Flow** — Ingest → List → Get → Replay
-- **IT-3: Policy Flow** — Create policy → Evaluate actions → Enforce rules
-- **IT-4: End-to-End** — Episodes feed trust scores that influence policy decisions
-
-```bash
-# Run tests (requires stack to be running)
-make test
+air = AIRBlackbox()
+# Wraps your OpenAI client with automatic tracing
+client = air.wrap(openai.OpenAI())
 ```
 
-## Repository Layout
+**Option 3: OTel Collector processor (no code changes)**
 
+Add to your existing `otelcol-config.yaml`:
+
+```yaml
+processors:
+  genaisafe:
+    redact:
+      mode: hash_and_preview
+      preview_chars: 48
+    metrics:
+      enable: true
+    loop_detection:
+      enable: true
+      repeat_threshold: 6
 ```
-air-platform/           ← You are here (orchestration)
-├── docker-compose.yml  ← Wires all services together
-├── Makefile            ← Convenience commands
-├── tests/              ← Integration tests
-│   ├── test_health.py
-│   ├── test_episode_flow.py
-│   ├── test_policy_flow.py
-│   └── test_end_to_end.py
-│
-├── ../airblackbox-mvp/        ← Gateway (Go)
-├── ../agent-episode-store/    ← Episode Store (Python)
-├── ../eval-harness/           ← Eval Harness (Python)
-└── ../agent-policy-engine/    ← Policy Engine (Python)
-```
 
-## The Data Flow
+## Components
 
-1. **Record** — Agent makes an LLM call through the Gateway. The call is recorded as a tamper-evident AIR record with vault-backed storage.
+### Core Runtime
 
-2. **Group** — The Episode Store groups related AIR records into task-level episodes. One "write an email" task = one episode with multiple LLM calls.
+| Repository | Description | Demo |
+|---|---|---|
+| [**gateway**](https://github.com/airblackbox/gateway) | OpenAI-compatible reverse proxy — records every LLM call as an OpenTelemetry trace | [View Demo](https://htmlpreview.github.io/?https://github.com/airblackbox/gateway/blob/main/demo.html) |
+| [**agent-episode-store**](https://github.com/airblackbox/agent-episode-store) | Groups raw traces into replayable task-level episodes (SQLite + S3) | — |
+| [**agent-policy-engine**](https://github.com/airblackbox/agent-policy-engine) | Risk-tiered autonomy, kill switches, and trust scoring | — |
+| [**air-platform**](https://github.com/airblackbox/air-platform) | Docker Compose orchestration — one command to run the full stack | — |
 
-3. **Score** — The Eval Harness replays episodes, scoring them on correctness (40%), cost delta (20%), tool match (20%), latency delta (10%), and safety (10%).
+### Instrumentation
 
-4. **Enforce** — The Policy Engine uses eval scores to compute trust, assigns agents to autonomy tiers (SHADOW → GATED → SUPERVISED → AUTONOMOUS), and enforces runtime rules with kill switches.
+| Repository | Description |
+|---|---|
+| [**python-sdk**](https://github.com/airblackbox/python-sdk) | Python SDK — wraps OpenAI, Anthropic, and other LLM clients |
+| [**trust-crewai**](https://github.com/airblackbox/trust-crewai) | Trust plugin for CrewAI multi-agent framework |
+| [**trust-langchain**](https://github.com/airblackbox/trust-langchain) | Trust plugin for LangChain / LangGraph |
+| [**trust-autogen**](https://github.com/airblackbox/trust-autogen) | Trust plugin for Microsoft AutoGen |
+| [**trust-openai-agents**](https://github.com/airblackbox/trust-openai-agents) | Trust plugin for OpenAI Agents SDK |
 
-## Roadmap
+### Safety & Governance
 
-- [x] Gateway — Proxy + vault + AIR records
-- [x] Episode Store — SQLite + replay + JSONL export
-- [x] Eval Harness — Scoring + regression detection
-- [x] Policy Engine — Tiers + kill switches + trust
-- [x] Docker Compose — Full stack orchestration
-- [x] Integration Tests — Cross-service verification
-- [ ] Collector Pipeline — OTel processors (normalize, vault, redact)
-- [ ] Live Replay — Replay episodes through the gateway
-- [ ] Dashboard — Real-time monitoring UI
-- [ ] CI/CD — GitHub Actions for the full stack
+| Repository | Description | Demo |
+|---|---|---|
+| [**otel-collector-genai**](https://github.com/airblackbox/otel-collector-genai) | OTel Collector processor — redaction, cost metrics, loop detection | [View Demo](https://htmlpreview.github.io/?https://github.com/airblackbox/otel-collector-genai/blob/main/demo.html) |
+| [**otel-prompt-vault**](https://github.com/airblackbox/otel-prompt-vault) | Encrypted prompt/completion storage with pre-signed URL retrieval | — |
+| [**otel-semantic-normalizer**](https://github.com/airblackbox/otel-semantic-normalizer) | Normalizes gen_ai.* and llm.* attributes to a standard schema | — |
+| [**agent-tool-sandbox**](https://github.com/airblackbox/agent-tool-sandbox) | Sandboxed execution environment for agent tool calls | — |
+| [**runtime-aibom-emitter**](https://github.com/airblackbox/runtime-aibom-emitter) | Generates AI Bill of Materials at runtime | — |
+
+### Evaluation & Testing
+
+| Repository | Description |
+|---|---|
+| [**eval-harness**](https://github.com/airblackbox/eval-harness) | CLI tool for replaying and scoring episodes against policies |
+| [**trace-regression-harness**](https://github.com/airblackbox/trace-regression-harness) | Detects behavioral regressions across agent versions |
+| [**agent-vcr**](https://github.com/airblackbox/agent-vcr) | Record and replay agent interactions for deterministic testing |
+
+### Security
+
+| Repository | Description |
+|---|---|
+| [**mcp-security-scanner**](https://github.com/airblackbox/mcp-security-scanner) | Scans MCP server configurations for security vulnerabilities |
+| [**mcp-policy-gateway**](https://github.com/airblackbox/mcp-policy-gateway) | Policy enforcement gateway for Model Context Protocol |
+
+## Why Collector-Side?
+
+Most teams try to add safety at the application level — inside each agent, each framework, each service. This approach fails because:
+
+- Every team re-invents redaction differently
+- Secrets leak through cracks between implementations
+- Token/cost metrics are scattered and inconsistent
+- Runaway agents are caught too late (or never)
+
+AIR Blackbox operates at the **infrastructure level** — in the OTel Collector pipeline, as a reverse proxy, and as a policy engine. One configuration change protects all services. No application code changes required.
+
+## Threat Model
+
+AIR Blackbox addresses four attack vectors in GenAI observability:
+
+| Threat | Risk | Mitigation |
+|---|---|---|
+| **Prompt Data Leakage** | PII, proprietary data exposed in traces | SHA-256 redaction with configurable preview |
+| **Secret Exposure** | API keys, bearer tokens in span attributes | Denylist regex patterns, automatic detection |
+| **Runaway Loops** | Infinite tool-calling burning budget | Repeat threshold detection, span flagging |
+| **Cost Blind Spots** | No normalized token/cost visibility | Unified metrics extraction from any format |
 
 ## License
 
-Apache-2.0
+All AIR Blackbox components are released under the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0).
+
+## Contributing
+
+We welcome contributions. See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+---
+
+<p align="center">
+  <strong>AIR Blackbox</strong> — Agent Infrastructure Runtime<br/>
+  The observability security layer for autonomous AI systems
+</p>
