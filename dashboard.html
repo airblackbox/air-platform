@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AIR Blackbox — Dashboard</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0a0a0f; color: #e0e0e0; min-height: 100vh; }
+
+/* Header */
+.header { display: flex; align-items: center; justify-content: space-between; padding: 16px 24px; border-bottom: 1px solid #1e1e2e; background: #0d0d14; }
+.header h1 { font-size: 18px; color: #fff; }
+.header h1 span { color: #3b82f6; }
+.header-right { display: flex; align-items: center; gap: 16px; }
+.status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.status-dot.connected { background: #22c55e; box-shadow: 0 0 6px rgba(34,197,94,0.5); }
+.status-dot.disconnected { background: #ef4444; }
+.status-text { font-size: 12px; color: #888; }
+.refresh-btn { padding: 6px 14px; border-radius: 6px; border: 1px solid #2d2d4e; background: #1a1a2e; color: #8b5cf6; cursor: pointer; font-size: 12px; transition: all 0.2s; }
+.refresh-btn:hover { background: #2d2d4e; }
+.auto-toggle { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #888; }
+.auto-toggle input { accent-color: #3b82f6; }
+
+/* Layout */
+.container { display: grid; grid-template-columns: 320px 1fr; height: calc(100vh - 57px); }
+@media (max-width: 900px) { .container { grid-template-columns: 1fr; } }
+
+/* Sidebar — episode list */
+.sidebar { border-right: 1px solid #1e1e2e; overflow-y: auto; background: #0d0d14; }
+.sidebar-header { padding: 12px 16px; border-bottom: 1px solid #1e1e2e; font-size: 12px; color: #888; display: flex; justify-content: space-between; }
+.episode-item { padding: 12px 16px; border-bottom: 1px solid #141420; cursor: pointer; transition: background 0.15s; }
+.episode-item:hover { background: #141420; }
+.episode-item.active { background: #1a1a2e; border-left: 3px solid #3b82f6; }
+.episode-item .ep-title { font-size: 13px; font-weight: 600; color: #ddd; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.episode-item .ep-meta { display: flex; gap: 10px; font-size: 11px; color: #666; }
+.episode-item .ep-meta .blocked { color: #ef4444; }
+.episode-item .ep-time { font-size: 11px; color: #555; margin-top: 4px; }
+
+/* Main content */
+.main { overflow-y: auto; padding: 24px; }
+
+/* Summary cards */
+.summary-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 24px; }
+.summary-card { background: #111118; border: 1px solid #1e1e2e; border-radius: 8px; padding: 16px; text-align: center; }
+.summary-card .card-val { font-size: 24px; font-weight: 700; }
+.summary-card .card-label { font-size: 11px; color: #666; margin-top: 4px; }
+.card-blue .card-val { color: #3b82f6; }
+.card-green .card-val { color: #22c55e; }
+.card-red .card-val { color: #ef4444; }
+.card-yellow .card-val { color: #eab308; }
+.card-purple .card-val { color: #8b5cf6; }
+
+/* Detail panels */
+.detail-section { margin-bottom: 20px; }
+.detail-section h3 { font-size: 14px; color: #fff; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #1e1e2e; }
+
+/* Steps timeline */
+.step { display: flex; gap: 12px; padding: 10px 0; border-bottom: 1px solid #141420; }
+.step:last-child { border-bottom: none; }
+.step-num { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0; }
+.step-num.allow { background: #0d2a0d; color: #22c55e; }
+.step-num.block { background: #2a0d0d; color: #ef4444; }
+.step-num.warn { background: #2a2a0d; color: #eab308; }
+.step-num.info { background: #1a1a2e; color: #8b5cf6; }
+.step-body { flex: 1; }
+.step-body .step-action { font-size: 13px; font-weight: 600; color: #ddd; }
+.step-body .step-detail { font-size: 12px; color: #888; margin-top: 2px; font-family: 'SF Mono', 'Fira Code', monospace; }
+.step-body .step-time { font-size: 11px; color: #555; margin-top: 4px; }
+
+/* Trace data */
+.trace-block { background: #0d0d14; border: 1px solid #1e1e2e; border-radius: 6px; padding: 12px; margin: 8px 0; font-family: 'SF Mono', monospace; font-size: 12px; overflow-x: auto; }
+.trace-block .key { color: #3b82f6; }
+.trace-block .str { color: #22c55e; }
+.trace-block .num { color: #eab308; }
+.trace-block .bool { color: #8b5cf6; }
+
+/* Policy badges */
+.policy-badge { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: 700; text-transform: uppercase; }
+.badge-pass { background: #0d2a0d; color: #22c55e; }
+.badge-block { background: #2a0d0d; color: #ef4444; }
+.badge-warn { background: #2a2a0d; color: #eab308; }
+
+/* Empty state */
+.empty-state { text-align: center; padding: 60px 20px; color: #555; }
+.empty-state h2 { font-size: 18px; color: #888; margin-bottom: 12px; }
+.empty-state p { font-size: 14px; line-height: 1.6; max-width: 400px; margin: 0 auto; }
+.empty-state code { background: #1a1a2e; padding: 2px 8px; border-radius: 4px; color: #8b5cf6; font-size: 13px; }
+
+/* Error state */
+.error-banner { background: #2a0d0d; border: 1px solid #3f1a1a; border-radius: 6px; padding: 12px 16px; margin-bottom: 16px; font-size: 13px; color: #ef4444; display: flex; align-items: center; gap: 8px; }
+
+/* Loading */
+.loading { text-align: center; padding: 40px; color: #555; }
+.spinner { display: inline-block; width: 24px; height: 24px; border: 2px solid #333; border-top-color: #3b82f6; border-radius: 50%; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>AIR <span>Blackbox</span> Dashboard</h1>
+  <div class="header-right">
+    <span class="status-dot disconnected" id="statusDot"></span>
+    <span class="status-text" id="statusText">Connecting...</span>
+    <label class="auto-toggle">
+      <input type="checkbox" id="autoRefresh" checked> Auto-refresh
+    </label>
+    <button class="refresh-btn" onclick="loadEpisodes()">Refresh</button>
+  </div>
+</div>
+
+<div class="container">
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <span>Episodes</span>
+      <span id="episodeCount">0</span>
+    </div>
+    <div id="episodeList"></div>
+  </div>
+
+  <div class="main" id="mainContent">
+    <div class="empty-state" id="emptyState">
+      <h2>No episodes yet</h2>
+      <p>Run an agent through the AIR Blackbox Gateway and episodes will appear here automatically.</p>
+      <p style="margin-top:16px;">Make sure the stack is running:</p>
+      <p style="margin-top:8px;"><code>make up</code></p>
+    </div>
+  </div>
+</div>
+
+<script>
+const API_BASE = 'http://localhost:8081';
+let episodes = [];
+let selectedId = null;
+let autoRefreshInterval = null;
+
+async function loadEpisodes() {
+  try {
+    const res = await fetch(`${API_BASE}/episodes`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    episodes = await res.json();
+    episodes.sort((a, b) => {
+      const ta = a.created_at || a.timestamp || a.start_time || '';
+      const tb = b.created_at || b.timestamp || b.start_time || '';
+      return tb.localeCompare(ta);
+    });
+    setConnected(true);
+    renderEpisodeList();
+    if (episodes.length > 0 && !selectedId) {
+      selectEpisode(episodes[0].id || episodes[0].episode_id || 0);
+    }
+  } catch (err) {
+    setConnected(false);
+    document.getElementById('episodeList').innerHTML =
+      `<div class="error-banner" style="margin:12px;">Cannot reach Episode Store at ${API_BASE}. Is the stack running?</div>`;
+  }
+}
+
+function setConnected(connected) {
+  const dot = document.getElementById('statusDot');
+  const text = document.getElementById('statusText');
+  if (connected) {
+    dot.className = 'status-dot connected';
+    text.textContent = `Connected — ${episodes.length} episodes`;
+  } else {
+    dot.className = 'status-dot disconnected';
+    text.textContent = 'Disconnected';
+  }
+}
+
+function renderEpisodeList() {
+  const list = document.getElementById('episodeList');
+  document.getElementById('episodeCount').textContent = episodes.length;
+  if (episodes.length === 0) {
+    list.innerHTML = '<div style="padding:16px;color:#555;font-size:13px;">No episodes recorded yet.</div>';
+    return;
+  }
+  list.innerHTML = episodes.map((ep, i) => {
+    const id = ep.id || ep.episode_id || i;
+    const title = ep.title || ep.name || ep.agent_name || `Episode #${id}`;
+    const steps = ep.steps ? ep.steps.length : ep.events ? ep.events.length : '—';
+    const blocked = ep.blocked || (ep.steps && ep.steps.some(s => s.action === 'block')) || false;
+    const tokens = ep.total_tokens || ep.tokens || '—';
+    const cost = ep.total_cost != null ? `$${ep.total_cost.toFixed(3)}` : '—';
+    const time = ep.created_at || ep.timestamp || ep.start_time || '';
+    const timeStr = time ? new Date(time).toLocaleString() : '';
+    const active = id === selectedId ? 'active' : '';
+    return `<div class="episode-item ${active}" onclick="selectEpisode('${id}')">
+      <div class="ep-title">${escapeHtml(title)}</div>
+      <div class="ep-meta">
+        <span>${steps} steps</span>
+        <span>${tokens} tokens</span>
+        <span>${cost}</span>
+        ${blocked ? '<span class="blocked">BLOCKED</span>' : ''}
+      </div>
+      ${timeStr ? `<div class="ep-time">${timeStr}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+async function selectEpisode(id) {
+  selectedId = id;
+  renderEpisodeList();
+  const main = document.getElementById('mainContent');
+  main.innerHTML = '<div class="loading"><div class="spinner"></div><p style="margin-top:12px;">Loading episode...</p></div>';
+  try {
+    let ep;
+    try {
+      const res = await fetch(`${API_BASE}/episodes/${id}`);
+      if (res.ok) { ep = await res.json(); }
+      else { ep = episodes.find(e => (e.id || e.episode_id) === id) || episodes[id]; }
+    } catch { ep = episodes.find(e => (e.id || e.episode_id) === id) || episodes[id]; }
+    if (!ep) { main.innerHTML = '<div class="error-banner">Episode not found</div>'; return; }
+    renderEpisodeDetail(ep);
+  } catch (err) {
+    main.innerHTML = `<div class="error-banner">Error loading episode: ${escapeHtml(err.message)}</div>`;
+  }
+}
+
+function renderEpisodeDetail(ep) {
+  const main = document.getElementById('mainContent');
+  const title = ep.title || ep.name || ep.agent_name || `Episode #${ep.id || ep.episode_id}`;
+  const steps = ep.steps || ep.events || [];
+  const totalTokens = ep.total_tokens || ep.tokens || steps.reduce((sum, s) => sum + (s.tokens || 0), 0);
+  const totalCost = ep.total_cost != null ? ep.total_cost : steps.reduce((sum, s) => sum + (s.cost || 0), 0);
+  const blocked = ep.blocked || steps.some(s => s.action === 'block' || s.status === 'blocked');
+  const trustScore = ep.trust_score != null ? ep.trust_score : '—';
+  const duration = ep.duration_ms || ep.duration || '—';
+
+  let html = `
+    <h2 style="font-size:18px;color:#fff;margin-bottom:16px;">${escapeHtml(title)}</h2>
+    <div class="summary-cards">
+      <div class="summary-card card-blue">
+        <div class="card-val">${steps.length}</div>
+        <div class="card-label">Steps</div>
+      </div>
+      <div class="summary-card card-green">
+        <div class="card-val">${typeof totalTokens === 'number' ? totalTokens.toLocaleString() : totalTokens}</div>
+        <div class="card-label">Tokens</div>
+      </div>
+      <div class="summary-card card-yellow">
+        <div class="card-val">${typeof totalCost === 'number' ? '$' + totalCost.toFixed(3) : totalCost}</div>
+        <div class="card-label">Cost</div>
+      </div>
+      <div class="summary-card card-purple">
+        <div class="card-val">${trustScore}</div>
+        <div class="card-label">Trust Score</div>
+      </div>
+      <div class="summary-card ${blocked ? 'card-red' : 'card-green'}">
+        <div class="card-val">${blocked ? 'BLOCKED' : 'OK'}</div>
+        <div class="card-label">Status</div>
+      </div>
+      <div class="summary-card card-blue">
+        <div class="card-val">${typeof duration === 'number' ? duration + 'ms' : duration}</div>
+        <div class="card-label">Duration</div>
+      </div>
+    </div>
+  `;
+
+  if (steps.length > 0) {
+    html += `<div class="detail-section"><h3>Steps Timeline</h3>`;
+    steps.forEach((step, i) => {
+      const action = step.action || step.type || step.event || 'step';
+      const detail = step.detail || step.content || step.message || step.input || '';
+      const status = step.status || step.result || 'info';
+      const time = step.timestamp || step.time || '';
+      const statusClass = status === 'blocked' || action === 'block' ? 'block'
+        : status === 'warning' || action === 'flag' ? 'warn'
+        : status === 'allowed' || action === 'allow' ? 'allow' : 'info';
+      html += `
+        <div class="step">
+          <div class="step-num ${statusClass}">${i + 1}</div>
+          <div class="step-body">
+            <div class="step-action">${escapeHtml(action)}</div>
+            ${detail ? `<div class="step-detail">${escapeHtml(typeof detail === 'object' ? JSON.stringify(detail, null, 2) : String(detail))}</div>` : ''}
+            ${time ? `<div class="step-time">${new Date(time).toLocaleString()}</div>` : ''}
+          </div>
+        </div>
+      `;
+    });
+    html += `</div>`;
+  }
+
+  html += `<div class="detail-section"><h3>Raw Episode Data</h3>`;
+  html += `<div class="trace-block"><pre>${syntaxHighlight(JSON.stringify(ep, null, 2))}</pre></div>`;
+  html += `</div>`;
+  main.innerHTML = html;
+}
+
+function syntaxHighlight(json) {
+  return escapeHtml(json).replace(
+    /("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,
+    function (match) {
+      let cls = 'num';
+      if (/^"/.test(match)) {
+        cls = /:$/.test(match) ? 'key' : 'str';
+      } else if (/true|false/.test(match)) {
+        cls = 'bool';
+      }
+      return '<span class="' + cls + '">' + match + '</span>';
+    }
+  );
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.appendChild(document.createTextNode(str));
+  return div.innerHTML;
+}
+
+function startAutoRefresh() {
+  if (autoRefreshInterval) clearInterval(autoRefreshInterval);
+  autoRefreshInterval = setInterval(() => {
+    if (document.getElementById('autoRefresh').checked) {
+      loadEpisodes();
+    }
+  }, 5000);
+}
+
+document.getElementById('autoRefresh').addEventListener('change', (e) => {
+  if (e.target.checked) startAutoRefresh();
+  else if (autoRefreshInterval) clearInterval(autoRefreshInterval);
+});
+
+loadEpisodes();
+startAutoRefresh();
+</script>
+</body>
+</html>
