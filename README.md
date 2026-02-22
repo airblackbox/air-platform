@@ -221,6 +221,17 @@ All AIR Blackbox components are released under the [Apache License 2.0](https://
 
 We welcome contributions. See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
+
+---
+
+## Support the Project
+
+If AIR Blackbox is useful to you, a star helps others find it.
+
+[![Star on GitHub](https://img.shields.io/github/stars/airblackbox/air-platform?style=social)](https://github.com/airblackbox/air-platform)
+
+Questions or feedback? Start a [Discussion](https://github.com/airblackbox/air-platform/discussions).
+
 ---
 
 <p align="center">
