@@ -16,6 +16,12 @@
   <a href="https://github.com/airblackbox"><img src="https://img.shields.io/badge/python-3.10+-3776AB" alt="Python" /></a>
 </p>
 
+<p align="center">
+  <a href="https://airblackbox.github.io/air-platform/hosted-demo.html"><strong>🎯 Live Demo</strong></a> · 
+  <a href="https://airblackbox.github.io/air-platform/dashboard.html"><strong>📊 Dashboard</strong></a> · 
+  <a href="https://airblackbox.github.io/air-platform/compare.html"><strong>🔀 Compare Runs</strong></a>
+</p>
+
 ---
 
 ## Interactive Demos
@@ -29,6 +35,9 @@ Explore each core component without installing anything:
 | **Policy Engine** | Risk-tiered autonomy, kill switches, and trust scoring | [Launch Demo →](https://htmlpreview.github.io/?https://github.com/airblackbox/agent-policy-engine/blob/main/demo.html) |
 | **Platform** | Full stack in one command — Docker Compose orchestration | [Launch Demo →](https://htmlpreview.github.io/?https://github.com/airblackbox/air-platform/blob/main/demo.html) |
 | **OTel Collector** | Redaction, cost metrics, and loop detection processor | [Launch Demo →](https://htmlpreview.github.io/?https://github.com/airblackbox/otel-collector-genai/blob/main/demo.html) |
+| **Hosted Demo** | Full platform walkthrough — 4 scenarios with live traces | [Launch Demo →](https://airblackbox.github.io/air-platform/hosted-demo.html) |
+| **Dashboard** | Browse and inspect recorded episodes from the Episode Store | [Launch Dashboard →](https://airblackbox.github.io/air-platform/dashboard.html) |
+| **Compare Runs** | Diff two agent runs side-by-side — steps, tokens, cost, policy | [Launch Compare →](https://airblackbox.github.io/air-platform/compare.html) |
 
 ---
 
