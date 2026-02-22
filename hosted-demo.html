@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AIR Blackbox — Live Demo</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0a0a0f; color: #e0e0e0; min-height: 100vh; }
+
+.header { text-align: center; padding: 40px 20px 20px; }
+.header h1 { font-size: 28px; color: #fff; margin-bottom: 8px; }
+.header h1 span { color: #3b82f6; }
+.header p { color: #888; font-size: 15px; max-width: 600px; margin: 0 auto; }
+
+.demo-container { max-width: 1100px; margin: 0 auto; padding: 20px; }
+
+/* Architecture diagram */
+.arch-bar { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 20px 0 30px; flex-wrap: wrap; }
+.arch-node { padding: 8px 16px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.3s; border: 1px solid transparent; }
+.arch-node.active { transform: scale(1.08); }
+.arch-arrow { color: #444; font-size: 18px; }
+.node-agent { background: #1a1a2e; color: #8b5cf6; border-color: #2d2d4e; }
+.node-agent.active { border-color: #8b5cf6; box-shadow: 0 0 15px rgba(139,92,246,0.3); }
+.node-gateway { background: #1a2332; color: #3b82f6; border-color: #1e3a5f; }
+.node-gateway.active { border-color: #3b82f6; box-shadow: 0 0 15px rgba(59,130,246,0.3); }
+.node-policy { background: #2a1a1a; color: #ef4444; border-color: #3f1a1a; }
+.node-policy.active { border-color: #ef4444; box-shadow: 0 0 15px rgba(239,68,68,0.3); }
+.node-otel { background: #1a2a1a; color: #22c55e; border-color: #1a3f1a; }
+.node-otel.active { border-color: #22c55e; box-shadow: 0 0 15px rgba(34,197,94,0.3); }
+.node-episode { background: #2a2a1a; color: #eab308; border-color: #3f3f1a; }
+.node-episode.active { border-color: #eab308; box-shadow: 0 0 15px rgba(234,179,8,0.3); }
+.node-llm { background: #1a1a1a; color: #888; border-color: #333; }
+.node-llm.active { border-color: #888; box-shadow: 0 0 15px rgba(136,136,136,0.3); }
+
+/* Main panels */
+.panels { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; }
+@media (max-width: 768px) { .panels { grid-template-columns: 1fr; } }
+
+.panel { background: #111118; border: 1px solid #1e1e2e; border-radius: 10px; overflow: hidden; }
+.panel-header { padding: 12px 16px; border-bottom: 1px solid #1e1e2e; display: flex; align-items: center; gap: 8px; }
+.panel-header .dot { width: 8px; height: 8px; border-radius: 50%; }
+.panel-header h3 { font-size: 13px; font-weight: 600; }
+.panel-body { padding: 16px; min-height: 320px; font-size: 13px; line-height: 1.6; }
+
+/* Agent panel */
+.agent-controls { margin-bottom: 16px; }
+.scenario-btn { padding: 8px 14px; margin: 4px; border-radius: 6px; border: 1px solid #2d2d4e; background: #1a1a2e; color: #8b5cf6; cursor: pointer; font-size: 12px; transition: all 0.2s; }
+.scenario-btn:hover { background: #2d2d4e; }
+.scenario-btn.active { background: #8b5cf6; color: #fff; border-color: #8b5cf6; }
+.agent-log { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 12px; color: #888; max-height: 240px; overflow-y: auto; }
+.agent-log .line { padding: 2px 0; opacity: 0; animation: fadeIn 0.3s forwards; }
+.agent-log .line.sent { color: #8b5cf6; }
+.agent-log .line.recv { color: #22c55e; }
+.agent-log .line.blocked { color: #ef4444; }
+.agent-log .line.warn { color: #eab308; }
+.agent-log .line.info { color: #888; }
+
+/* Trace panel */
+.trace-entry { padding: 8px 12px; margin: 4px 0; border-radius: 6px; border-left: 3px solid; opacity: 0; animation: fadeIn 0.3s forwards; }
+.trace-entry.gateway { border-color: #3b82f6; background: #0d1520; }
+.trace-entry.policy { border-color: #ef4444; background: #1a0d0d; }
+.trace-entry.otel { border-color: #22c55e; background: #0d1a0d; }
+.trace-entry.episode { border-color: #eab308; background: #1a1a0d; }
+.trace-entry .trace-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+.trace-entry .trace-content { font-family: 'SF Mono', monospace; font-size: 11px; color: #aaa; }
+.trace-entry .trace-content .key { color: #666; }
+.trace-entry .trace-content .val { color: #ddd; }
+.trace-entry .trace-content .redacted { color: #ef4444; text-decoration: line-through; }
+.trace-entry .trace-content .hash { color: #22c55e; }
+
+/* Policy panel */
+.policy-rule { padding: 10px 12px; margin: 6px 0; border-radius: 6px; background: #1a1a1a; border: 1px solid #222; opacity: 0; animation: fadeIn 0.3s forwards; }
+.policy-status { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 700; text-transform: uppercase; margin-left: 8px; }
+.status-pass { background: #0d2a0d; color: #22c55e; }
+.status-fail { background: #2a0d0d; color: #ef4444; }
+.status-warn { background: #2a2a0d; color: #eab308; }
+
+/* Episode panel */
+.episode-card { padding: 12px; margin: 6px 0; border-radius: 8px; background: #1a1a0d; border: 1px solid #2a2a1a; opacity: 0; animation: fadeIn 0.3s forwards; }
+.episode-card h4 { font-size: 13px; color: #eab308; margin-bottom: 8px; }
+.episode-steps { list-style: none; }
+.episode-steps li { padding: 4px 0; font-size: 12px; color: #aaa; display: flex; align-items: center; gap: 8px; }
+.episode-steps .step-icon { font-size: 14px; }
+.episode-meta { margin-top: 10px; display: flex; gap: 16px; font-size: 11px; color: #666; }
+.episode-meta span { display: flex; align-items: center; gap: 4px; }
+
+/* Stats bar */
+.stats-bar { display: flex; gap: 16px; margin: 20px 0 10px; justify-content: center; flex-wrap: wrap; }
+.stat { text-align: center; padding: 12px 20px; background: #111118; border: 1px solid #1e1e2e; border-radius: 8px; min-width: 120px; }
+.stat .stat-val { font-size: 22px; font-weight: 700; }
+.stat .stat-label { font-size: 11px; color: #666; margin-top: 4px; }
+.stat-blue .stat-val { color: #3b82f6; }
+.stat-green .stat-val { color: #22c55e; }
+.stat-red .stat-val { color: #ef4444; }
+.stat-yellow .stat-val { color: #eab308; }
+
+/* CTA */
+.cta { text-align: center; padding: 40px 20px; }
+.cta a { display: inline-block; padding: 12px 28px; background: #3b82f6; color: #fff; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 15px; transition: background 0.2s; }
+.cta a:hover { background: #2563eb; }
+.cta p { color: #666; font-size: 13px; margin-top: 12px; }
+
+@keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+
+/* Run button */
+.run-btn { display: block; width: 100%; padding: 10px; margin-top: 12px; border-radius: 6px; border: none; background: #8b5cf6; color: #fff; font-size: 14px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+.run-btn:hover { background: #7c3aed; }
+.run-btn:disabled { background: #333; color: #666; cursor: not-allowed; }
+</style>
+</head>
+<body>
+
+<div class="header">
+<h1>AIR <span>Blackbox</span> — Live Demo</h1>
+<p>See what happens when an AI agent's requests flow through AIR Blackbox. Pick a scenario and watch the full trace in real time.</p>
+</div>
+
+<div class="demo-container">
+
+<div class="arch-bar">
+<div class="arch-node node-agent" id="node-agent">Agent</div>
+<span class="arch-arrow">→</span>
+<div class="arch-node node-gateway" id="node-gateway">Gateway</div>
+<span class="arch-arrow">→</span>
+<div class="arch-node node-policy" id="node-policy">Policy Engine</div>
+<span class="arch-arrow">→</span>
+<div class="arch-node node-llm" id="node-llm">LLM Provider</div>
+<div style="width:100%;display:flex;justify-content:center;gap:80px;margin-top:8px;">
+<div class="arch-node node-otel" id="node-otel">OTel Collector</div>
+<div class="arch-node node-episode" id="node-episode">Episode Store</div>
+</div>
+</div>
+
+<div class="stats-bar">
+<div class="stat stat-blue"><div class="stat-val" id="stat-requests">0</div><div class="stat-label">Requests</div></div>
+<div class="stat stat-green"><div class="stat-val" id="stat-tokens">0</div><div class="stat-label">Tokens</div></div>
+<div class="stat stat-red"><div class="stat-val" id="stat-blocked">0</div><div class="stat-label">Blocked</div></div>
+<div class="stat stat-yellow"><div class="stat-val" id="stat-cost">$0.00</div><div class="stat-label">Cost</div></div>
+</div>
+
+<div style="text-align:center;margin:16px 0;">
+<div class="agent-controls">
+<button class="scenario-btn active" data-scenario="normal" onclick="selectScenario(this)">Normal Request</button>
+<button class="scenario-btn" data-scenario="loop" onclick="selectScenario(this)">Runaway Loop</button>
+<button class="scenario-btn" data-scenario="pii" onclick="selectScenario(this)">PII in Prompt</button>
+<button class="scenario-btn" data-scenario="dangerous" onclick="selectScenario(this)">Dangerous Tool Call</button>
+</div>
+<button class="run-btn" id="runBtn" onclick="runScenario()">Run Scenario</button>
+</div>
+
+<div class="panels">
+<div class="panel">
+<div class="panel-header">
+<div class="dot" style="background:#8b5cf6;"></div>
+<h3 style="color:#8b5cf6;">Agent Activity</h3>
+</div>
+<div class="panel-body">
+<div class="agent-log" id="agentLog"></div>
+</div>
+</div>
+
+<div class="panel">
+<div class="panel-header">
+<div class="dot" style="background:#3b82f6;"></div>
+<h3 style="color:#3b82f6;">Trace & Policy</h3>
+</div>
+<div class="panel-body" id="tracePanel"></div>
+</div>
+</div>
+
+<div class="panels" style="margin-top:16px;">
+<div class="panel">
+<div class="panel-header">
+<div class="dot" style="background:#ef4444;"></div>
+<h3 style="color:#ef4444;">Policy Evaluation</h3>
+</div>
+<div class="panel-body" id="policyPanel"></div>
+</div>
+
+<div class="panel">
+<div class="panel-header">
+<div class="dot" style="background:#eab308;"></div>
+<h3 style="color:#eab308;">Episode Replay</h3>
+</div>
+<div class="panel-body" id="episodePanel"></div>
+</div>
+</div>
+</div>
+
+<div class="cta">
+<a href="https://github.com/airblackbox/air-platform">Get Started — 5 Minute Setup</a>
+<p>git clone, make up, done. Apache 2.0.</p>
+</div>
+
+<script>
+let currentScenario = 'normal';
+let stats = { requests: 0, tokens: 0, blocked: 0, cost: 0 };
+let running = false;
+
+function selectScenario(btn) {
+  document.querySelectorAll('.scenario-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  currentScenario = btn.dataset.scenario;
+}
+
+function clearPanels() {
+  document.getElementById('agentLog').innerHTML = '';
+  document.getElementById('tracePanel').innerHTML = '';
+  document.getElementById('policyPanel').innerHTML = '';
+  document.getElementById('episodePanel').innerHTML = '';
+}
+
+function activateNode(id) {
+  document.getElementById(id).classList.add('active');
+  setTimeout(() => document.getElementById(id).classList.remove('active'), 1200);
+}
+
+function updateStats() {
+  document.getElementById('stat-requests').textContent = stats.requests;
+  document.getElementById('stat-tokens').textContent = stats.tokens.toLocaleString();
+  document.getElementById('stat-blocked').textContent = stats.blocked;
+  document.getElementById('stat-cost').textContent = '$' + stats.cost.toFixed(2);
+}
+
+function addAgentLine(text, cls, delay) {
+  return new Promise(r => setTimeout(() => {
+    const log = document.getElementById('agentLog');
+    const line = document.createElement('div');
+    line.className = 'line ' + cls;
+    line.textContent = text;
+    log.appendChild(line);
+    log.scrollTop = log.scrollHeight;
+    r();
+  }, delay));
+}
+
+function addTrace(type, label, content, delay) {
+  return new Promise(r => setTimeout(() => {
+    const panel = document.getElementById('tracePanel');
+    const entry = document.createElement('div');
+    entry.className = 'trace-entry ' + type;
+    entry.innerHTML = `<div class="trace-label" style="color:${
+      type === 'gateway' ? '#3b82f6' : type === 'policy' ? '#ef4444' : type === 'otel' ? '#22c55e' : '#eab308'
+    }">${label}</div><div class="trace-content">${content}</div>`;
+    panel.appendChild(entry);
+    panel.scrollTop = panel.scrollHeight;
+    r();
+  }, delay));
+}
+
+function addPolicy(name, status, detail, delay) {
+  return new Promise(r => setTimeout(() => {
+    const panel = document.getElementById('policyPanel');
+    const rule = document.createElement('div');
+    rule.className = 'policy-rule';
+    const statusCls = status === 'PASS' ? 'status-pass' : status === 'BLOCK' ? 'status-fail' : 'status-warn';
+    rule.innerHTML = `<strong>${name}</strong><span class="policy-status ${statusCls}">${status}</span><div style="font-size:11px;color:#888;margin-top:6px;">${detail}</div>`;
+    panel.appendChild(rule);
+    r();
+  }, delay));
+}
+
+function addEpisode(title, steps, meta, delay) {
+  return new Promise(r => setTimeout(() => {
+    const panel = document.getElementById('episodePanel');
+    const card = document.createElement('div');
+    card.className = 'episode-card';
+    const stepsHtml = steps.map(s => `<li><span class="step-icon">${s.icon}</span> ${s.text}</li>`).join('');
+    const metaHtml = meta.map(m => `<span>${m}</span>`).join('');
+    card.innerHTML = `<h4>${title}</h4><ul class="episode-steps">${stepsHtml}</ul><div class="episode-meta">${metaHtml}</div>`;
+    panel.appendChild(card);
+    r();
+  }, delay));
+}
+
+async function runNormal() {
+  activateNode('node-agent');
+  await addAgentLine('> POST /v1/chat/completions', 'sent', 0);
+  await addAgentLine('  model: gpt-4o', 'info', 200);
+  await addAgentLine('  messages: [{ role: "user", content: "Summarize Q4 revenue" }]', 'info', 200);
+
+  activateNode('node-gateway');
+  await addTrace('gateway', 'Gateway Intercept', '<span class="key">trace_id:</span> <span class="val">a1b2c3d4e5f6</span><br><span class="key">model:</span> <span class="val">gpt-4o</span><br><span class="key">tokens_in:</span> <span class="val">42</span>', 400);
+
+  activateNode('node-policy');
+  await addPolicy('rate-limit', 'PASS', 'Request 1 of 50 in current window', 400);
+  await addPolicy('budget-cap', 'PASS', '$0.03 of $5.00 budget used', 200);
+  await addPolicy('tool-restriction', 'PASS', 'No restricted tool calls detected', 200);
+  await addTrace('policy', 'Policy Engine', '<span class="key">risk_tier:</span> <span class="val">low</span><br><span class="key">trust_score:</span> <span class="val">0.95</span><br><span class="key">action:</span> <span class="val">ALLOW</span>', 300);
+
+  activateNode('node-llm');
+  await addAgentLine('< 200 OK (847ms)', 'recv', 600);
+  await addAgentLine('  completion: "Q4 revenue was $12.3M, up 18% YoY..."', 'recv', 200);
+  stats.requests++; stats.tokens += 385; stats.cost += 0.03;
+  updateStats();
+
+  activateNode('node-otel');
+  await addTrace('otel', 'OTel Collector', '<span class="key">pii_scan:</span> <span class="val">clean</span><br><span class="key">cost:</span> <span class="val">$0.031</span><br><span class="key">latency:</span> <span class="val">847ms</span><br><span class="key">loop_check:</span> <span class="val">no repetition</span>', 400);
+
+  activateNode('node-episode');
+  await addEpisode('Episode #1 — Revenue Summary', [
+    { icon: '>', text: 'Agent sent: "Summarize Q4 revenue"' },
+    { icon: '?', text: 'Policy: ALLOW (low risk, trust 0.95)' },
+    { icon: '<', text: 'LLM returned: 385 tokens in 847ms' },
+    { icon: '?', text: 'PII scan: clean' }
+  ], ['385 tokens', '$0.03', '847ms', 'Risk: Low'], 400);
+}
+
+async function runLoop() {
+  for (let i = 1; i <= 5; i++) {
+    activateNode('node-agent');
+    await addAgentLine(`> POST /v1/chat/completions (request ${i})`, 'sent', 0);
+    await addAgentLine('  messages: [{ content: "Check order status #4521" }]', 'info', 150);
+
+    activateNode('node-gateway');
+    stats.requests++; stats.tokens += 120; stats.cost += 0.01;
+    updateStats();
+
+    if (i < 4) {
+      activateNode('node-policy');
+      await addPolicy(`rate-limit (req ${i})`, 'PASS', `Request ${i} of 50 in window`, 200);
+      await addAgentLine(`< 200 OK — "Order #4521 is processing..."`, 'recv', 300);
+      await addTrace('otel', `OTel — Request ${i}`, `<span class="key">loop_check:</span> <span class="val">${i >= 2 ? 'REPEATED PATTERN DETECTED (' + i + 'x)' : 'ok'}</span>`, 200);
+    }
+    if (i === 3) {
+      await addAgentLine('  [OTel] WARNING: Repeated request pattern detected (3x)', 'warn', 200);
+    }
+    if (i === 4) {
+      await addAgentLine('  [OTel] ALERT: Loop confirmed — 4 identical requests', 'warn', 200);
+      await addTrace('otel', 'OTel — Loop Detection', '<span class="key">pattern:</span> <span class="val">identical prompt 4x in 8s</span><br><span class="key">action:</span> <span class="val">TRIGGER KILL SWITCH</span>', 300);
+    }
+    if (i === 5) {
+      activateNode('node-policy');
+      await addPolicy('loop-detector', 'BLOCK', 'Kill switch triggered — identical request pattern 5x', 300);
+      await addTrace('policy', 'Policy Engine — BLOCKED', '<span class="key">rule:</span> <span class="val">loop-detector</span><br><span class="key">action:</span> <span style="color:#ef4444;font-weight:bold;">BLOCK</span><br><span class="key">reason:</span> <span class="val">Repeated identical requests detected</span>', 300);
+      await addAgentLine('< 429 BLOCKED — Kill switch activated', 'blocked', 300);
+      stats.blocked++;
+      updateStats();
+      await addAgentLine('  Agent terminated. Budget saved: ~$47.00 (estimated 4,700 remaining calls)', 'warn', 400);
+    }
+  }
+  activateNode('node-episode');
+  await addEpisode('Episode #2 — Runaway Loop (KILLED)', [
+    { icon: '>', text: 'Agent sent: "Check order status #4521" x5' },
+    { icon: '!', text: 'OTel: Loop pattern detected at request 3' },
+    { icon: '!', text: 'OTel: Kill switch triggered at request 4' },
+    { icon: 'X', text: 'Policy Engine: BLOCKED at request 5' },
+    { icon: '$', text: 'Estimated savings: $47.00' }
+  ], ['600 tokens', '$0.05 (saved ~$47)', 'KILLED', 'Risk: Critical'], 400);
+}
+
+async function runPII() {
+  activateNode('node-agent');
+  await addAgentLine('> POST /v1/chat/completions', 'sent', 0);
+  await addAgentLine('  messages: [{ content: "Send invoice to john@acme.com for $15,000.', 'info', 200);
+  await addAgentLine('    His SSN is 482-91-3847 and card is 4532-XXXX-XXXX-7821" }]', 'info', 200);
+
+  activateNode('node-gateway');
+  await addTrace('gateway', 'Gateway Intercept', '<span class="key">trace_id:</span> <span class="val">f7e8d9c0b1a2</span><br><span class="key">model:</span> <span class="val">gpt-4o</span><br><span class="key">tokens_in:</span> <span class="val">68</span>', 400);
+
+  activateNode('node-policy');
+  await addPolicy('content-match', 'WARN', 'Payment-related content detected — risk tier elevated', 400);
+  await addPolicy('rate-limit', 'PASS', 'Request 1 of 50 in window', 200);
+  await addTrace('policy', 'Policy Engine', '<span class="key">risk_tier:</span> <span class="val" style="color:#eab308;">high</span><br><span class="key">flags:</span> <span class="val">payment, PII detected</span><br><span class="key">action:</span> <span class="val">ALLOW (with PII redaction)</span>', 300);
+
+  activateNode('node-llm');
+  await addAgentLine('< 200 OK (1,204ms)', 'recv', 600);
+  stats.requests++; stats.tokens += 520; stats.cost += 0.04;
+  updateStats();
+
+  activateNode('node-otel');
+  await addTrace('otel', 'OTel — PII Redaction', '<span class="key">email:</span> <span class="redacted">john@acme.com</span> → <span class="hash">jo****@ac**[hash:8f2a]</span><br><span class="key">SSN:</span> <span class="redacted">482-91-3847</span> → <span class="hash">[REDACTED:SSN:hash:c4b1]</span><br><span class="key">card:</span> <span class="redacted">4532-XXXX-XXXX-7821</span> → <span class="hash">[REDACTED:CC:hash:91e3]</span>', 400);
+  await addAgentLine('  [OTel] PII redacted: email, SSN, credit card — hashed for debug', 'warn', 300);
+
+  activateNode('node-episode');
+  await addEpisode('Episode #3 — Invoice (PII Redacted)', [
+    { icon: '>', text: 'Agent sent: invoice request with PII' },
+    { icon: '!', text: 'Policy: high risk — payment content detected' },
+    { icon: '#', text: 'OTel: 3 PII fields redacted (email, SSN, CC)' },
+    { icon: '<', text: 'LLM returned: 520 tokens in 1,204ms' },
+    { icon: '?', text: 'Trace stored with redacted data only' }
+  ], ['520 tokens', '$0.04', '1,204ms', 'Risk: High'], 400);
+}
+
+async function runDangerous() {
+  activateNode('node-agent');
+  await addAgentLine('> POST /v1/chat/completions', 'sent', 0);
+  await addAgentLine('  messages: [{ content: "Delete all files in /var/data" }]', 'info', 200);
+  await addAgentLine('  tool_calls: [{ function: "execute_command", args: "rm -rf /var/data/*" }]', 'info', 200);
+
+  activateNode('node-gateway');
+  await addTrace('gateway', 'Gateway Intercept', '<span class="key">trace_id:</span> <span class="val">d3e4f5a6b7c8</span><br><span class="key">tool_call:</span> <span class="val">execute_command</span><br><span class="key">args:</span> <span class="val">rm -rf /var/data/*</span>', 400);
+
+  activateNode('node-policy');
+  await addPolicy('tool-restriction', 'BLOCK', 'execute_command is in the blocked tools list', 400);
+  await addPolicy('content-match', 'BLOCK', 'Destructive filesystem operation detected', 200);
+  await addTrace('policy', 'Policy Engine — BLOCKED', '<span class="key">risk_tier:</span> <span style="color:#ef4444;font-weight:bold;">critical</span><br><span class="key">rules_triggered:</span> <span class="val">tool-restriction, content-match</span><br><span class="key">action:</span> <span style="color:#ef4444;font-weight:bold;">BLOCK</span>', 300);
+
+  await addAgentLine('< 403 FORBIDDEN — Policy violation: restricted tool call', 'blocked', 400);
+  stats.requests++; stats.blocked++; stats.tokens += 35;
+  updateStats();
+
+  await addAgentLine('  [Policy] execute_command is blocked by policy', 'blocked', 200);
+  await addAgentLine('  [Policy] Request never reached the LLM', 'warn', 200);
+
+  activateNode('node-otel');
+  await addTrace('otel', 'OTel Collector', '<span class="key">blocked:</span> <span class="val">true</span><br><span class="key">reason:</span> <span class="val">restricted tool + destructive op</span><br><span class="key">cost:</span> <span class="val">$0.00 (never reached LLM)</span>', 400);
+
+  activateNode('node-episode');
+  await addEpisode('Episode #4 — Dangerous Tool Call (BLOCKED)', [
+    { icon: '>', text: 'Agent tried: rm -rf /var/data/*' },
+    { icon: 'X', text: 'Policy: BLOCKED — execute_command restricted' },
+    { icon: 'X', text: 'Policy: BLOCKED — destructive filesystem op' },
+    { icon: '!', text: 'Request never reached LLM — $0.00 cost' }
+  ], ['35 tokens', '$0.00', 'BLOCKED', 'Risk: Critical'], 400);
+}
+
+async function runScenario() {
+  if (running) return;
+  running = true;
+  document.getElementById('runBtn').disabled = true;
+  document.getElementById('runBtn').textContent = 'Running...';
+  clearPanels();
+
+  try {
+    if (currentScenario === 'normal') await runNormal();
+    else if (currentScenario === 'loop') await runLoop();
+    else if (currentScenario === 'pii') await runPII();
+    else if (currentScenario === 'dangerous') await runDangerous();
+  } finally {
+    running = false;
+    document.getElementById('runBtn').disabled = false;
+    document.getElementById('runBtn').textContent = 'Run Scenario';
+  }
+}
+
+// Auto-run on load
+window.addEventListener('load', () => setTimeout(runScenario, 500));
+</script>
+</body>
+</html>
