@@ -137,7 +137,7 @@ let autoRefreshInterval = null;
 
 async function loadEpisodes() {
   try {
-    const res = await fetch(`${API_BASE}/episodes`);
+    const res = await fetch(`${API_BASE}/v1/episodes`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     episodes = await res.json();
     episodes.sort((a, b) => {
@@ -207,7 +207,7 @@ async function selectEpisode(id) {
   try {
     let ep;
     try {
-      const res = await fetch(`${API_BASE}/episodes/${id}`);
+      const res = await fetch(`${API_BASE}/v1/episodes/${id}`);
       if (res.ok) { ep = await res.json(); }
       else { ep = episodes.find(e => (e.id || e.episode_id) === id) || episodes[id]; }
     } catch { ep = episodes.find(e => (e.id || e.episode_id) === id) || episodes[id]; }
