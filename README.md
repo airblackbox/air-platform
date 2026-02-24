@@ -185,7 +185,12 @@ processors:
 | [**agent-tool-sandbox**](https://github.com/airblackbox/agent-tool-sandbox) | Sandboxed execution environment for agent tool calls | — |
 | [**runtime-aibom-emitter**](https://github.com/airblackbox/runtime-aibom-emitter) | Generates AI Bill of Materials at runtime | — |
 
-### Evaluation & Testing
+#**Compliance**
+| Component | What It Does |
+|---|---|
+| [air-compliance](https://github.com/airblackbox/air-compliance-checker) | CLI scanner — checks your project for EU AI Act compliance coverage |
+
+## Evaluation & Testing
 
 | Repository | Description |
 |---|---|
