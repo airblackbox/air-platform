@@ -3,10 +3,10 @@
 </p>
 
 <h1 align="center">AIR Blackbox</h1>
-<h3 align="center">The flight recorder for autonomous AI agents</h3>
+<h3 align="center">Compliance infrastructure for autonomous AI agents</h3>
 
 <p align="center">
-  <strong>Record every decision. Replay every incident. Enforce every policy.</strong>
+  <strong>EU AI Act compliant by default. Tamper-evident audit. Runtime enforcement. Every framework.</strong>
 </p>
 
 <p align="center">
@@ -43,28 +43,28 @@ Explore each core component without installing anything:
 
 ## The Problem
 
-AI agents are making real decisions — calling APIs, executing code, moving money, accessing databases. But when something goes wrong, teams cannot reconstruct what happened or why.
+The EU AI Act enforcement date for high-risk AI systems is **August 2, 2026**. Companies deploying AI agents — tool-calling LLMs that take actions autonomously — face mandatory requirements around logging, transparency, human oversight, and data governance. Penalties: up to €35M or 7% of global turnover.
 
-There is no audit trail. No replay capability. No policy enforcement layer.
-
-Every team re-invents logging. Secrets leak into trace backends. Runaway agents burn through budgets undetected. And when regulators ask "what did your AI do? — nobody has a good answer.
+Most compliance platforms target CISOs with top-down dashboards. Nobody is giving developers the building blocks to make their agents compliant by default.
 
 ## What AIR Blackbox Does
 
-AIR Blackbox is the missing infrastructure layer between your AI agents and your observability stack.
+AIR Blackbox is the compliance infrastructure layer for AI agents. Drop-in SDKs that make your agent stack EU AI Act compliant — the same way Stripe made payments PCI compliant.
 
 ```
-Your Agent → AIR Blackbox → Safe, Auditable Telemetry
+Your Agent → AIR Blackbox → Compliant, Auditable, Enforced
 ```
 
-It provides four capabilities:
+| EU AI Act Article | Requirement | AIR Feature |
+|---|---|---|
+| **Art. 9** | Risk management | ConsentGate — risk classification and blocking policies |
+| **Art. 10** | Data governance | DataVault — PII tokenization before it reaches the LLM |
+| **Art. 11** | Technical documentation | Full call graph audit logging with timestamps |
+| **Art. 12** | Record-keeping | HMAC-SHA256 tamper-evident audit chain |
+| **Art. 14** | Human oversight | Consent-based tool gating with exception blocking |
+| **Art. 15** | Robustness & security | InjectionDetector + multi-layer defense |
 
-| Capability | What it does |
-|---|---|
-| **Record** | Captures every LLM call, tool invocation, and decision as a structured trace |
-| **Replay** | Groups traces into task-level episodes that can be replayed and investigated |
-| **Enforce** | Applies risk-tiered policies, kill switches, and trust scoring in real time |
-| **Audit** | Redacts secrets, normalizes metrics, and produces compliance-ready telemetry |
+See the [full compliance mapping](./docs/eu-ai-act-compliance.md) for article-by-article details.
 
 ## Architecture
 
@@ -200,16 +200,16 @@ processors:
 | [**mcp-security-scanner**](https://github.com/airblackbox/mcp-security-scanner) | Scans MCP server configurations for security vulnerabilities |
 | [**mcp-policy-gateway**](https://github.com/airblackbox/mcp-policy-gateway) | Policy enforcement gateway for Model Context Protocol |
 
-## Why Collector-Side?
+## Why Infrastructure-Level Compliance?
 
-Most teams try to add safety at the application level — inside each agent, each framework, each service. This approach fails because:
+Most teams try to add compliance at the application level — inside each agent, each framework, each service. This approach fails because:
 
-- Every team re-invents redaction differently
-- Secrets leak through cracks between implementations
-- Token/cost metrics are scattered and inconsistent
-- Runaway agents are caught too late (or never)
+- Every team re-invents audit logging differently (and none are tamper-evident)
+- PII leaks through cracks between implementations
+- No single chain of custody across framework boundaries
+- When regulators ask "prove it" — nobody has mathematically verifiable logs
 
-AIR Blackbox operates at the **infrastructure level** — in the OTel Collector pipeline, as a reverse proxy, and as a policy engine. One configuration change protects all services. No application code changes required.
+AIR Blackbox operates at the **infrastructure level** — as framework-native SDKs, an OTel Collector processor, a reverse proxy, and a policy engine. Three lines of code activates compliance across your entire agent stack.
 
 ## Threat Model
 
@@ -245,5 +245,5 @@ Questions or feedback? Start a [Discussion](https://github.com/airblackbox/air-p
 
 <p align="center">
   <strong>AIR Blackbox</strong> — Agent Infrastructure Runtime<br/>
-  The observability security layer for autonomous AI systems
+  Compliance infrastructure for autonomous AI agents
 </p>
