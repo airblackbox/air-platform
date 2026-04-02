@@ -6,6 +6,10 @@
 <h3 align="center">Compliance infrastructure for autonomous AI agents</h3>
 
 <p align="center">
+  <img src="demo.gif" alt="AIR Blackbox Platform demo" width="900">
+</p>
+
+<p align="center">
   <strong>EU AI Act compliant by default. Tamper-evident audit. Runtime enforcement. Every framework.</strong>
 </p>
 
