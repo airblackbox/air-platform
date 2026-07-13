@@ -1,32 +1,20 @@
-"""IT-1: Verify all services are healthy."""
+"""IT-1: Verify all services in the stack are healthy."""
 
 import httpx
-import pytest
 
 
 class TestServiceHealth:
-    """Verify each service responds to health checks."""
+    """Each service responds to its health endpoint."""
 
-    @pytest.mark.asyncio
-    async def test_episode_store_health(self, store_url):
-        async with httpx.AsyncClient() as client:
-            resp = await client.get(f"{store_url}/v1/health")
-            assert resp.status_code == 200
-            data = resp.json()
-            assert data["status"] == "ok"
+    def test_gateway_health(self, gateway_url):
+        resp = httpx.get(f"{gateway_url}/health", timeout=10)
+        assert resp.status_code == 200
+        assert resp.json()["status"] == "ok"
 
-    @pytest.mark.asyncio
-    async def test_policy_engine_health(self, policy_url):
-        async with httpx.AsyncClient() as client:
-            resp = await client.get(f"{policy_url}/v1/health")
-            assert resp.status_code == 200
+    def test_jaeger_ui(self, jaeger_url):
+        resp = httpx.get(f"{jaeger_url}/", timeout=10, follow_redirects=True)
+        assert resp.status_code == 200
 
-    @pytest.mark.asyncio
-    async def test_gateway_reachable(self, gateway_url):
-        """Gateway may not have /health but should respond."""
-        async with httpx.AsyncClient() as client:
-            try:
-                resp = await client.get(f"{gateway_url}/health")
-                assert resp.status_code in (200, 404)
-            except httpx.ConnectError:
-                pytest.skip("Gateway not running")
+    def test_minio_live(self, minio_url):
+        resp = httpx.get(f"{minio_url}/minio/health/live", timeout=10)
+        assert resp.status_code == 200

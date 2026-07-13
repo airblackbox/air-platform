@@ -14,4 +14,4 @@ Set PlaybackSpeed 0.8
 
 Type "python3 demo_gif.py"
 Enter
-Sleep 12s
+Sleep 9s

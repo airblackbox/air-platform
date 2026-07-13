@@ -1,12 +1,41 @@
-"""Integration test fixtures for AIR Platform."""
+"""Integration test fixtures for AIR Platform.
+
+These tests run against the live Docker Compose stack (`make up`). If the
+stack is not running, the whole suite is skipped with a clear message —
+unless AIR_REQUIRE_STACK=1 is set (used in CI), in which case an unreachable
+stack is a hard failure.
+"""
 
 import os
-import pytest
+
 import httpx
+import pytest
 
 GATEWAY_URL = os.environ.get("GATEWAY_URL", "http://localhost:8080")
-EPISODE_STORE_URL = os.environ.get("EPISODE_STORE_URL", "http://localhost:8100")
-POLICY_ENGINE_URL = os.environ.get("POLICY_ENGINE_URL", "http://localhost:8200")
+JAEGER_URL = os.environ.get("JAEGER_URL", "http://localhost:16686")
+MINIO_URL = os.environ.get("MINIO_URL", "http://localhost:9000")
+
+REQUIRE_STACK = os.environ.get("AIR_REQUIRE_STACK") == "1"
+
+
+def _stack_reachable() -> bool:
+    try:
+        httpx.get(f"{GATEWAY_URL}/health", timeout=5)
+        return True
+    except httpx.TransportError:
+        return False
+
+
+@pytest.fixture(scope="session", autouse=True)
+def require_stack():
+    if not _stack_reachable():
+        msg = (
+            f"AIR stack not reachable at {GATEWAY_URL}. "
+            "Start it with `make up` (or `docker compose up -d`)."
+        )
+        if REQUIRE_STACK:
+            pytest.fail(msg)
+        pytest.skip(msg)
 
 
 @pytest.fixture
@@ -15,54 +44,18 @@ def gateway_url():
 
 
 @pytest.fixture
-def store_url():
-    return EPISODE_STORE_URL
+def jaeger_url():
+    return JAEGER_URL
 
 
 @pytest.fixture
-def policy_url():
-    return POLICY_ENGINE_URL
+def minio_url():
+    return MINIO_URL
 
 
 @pytest.fixture
-def sample_episode():
-    """A minimal episode to ingest into the store."""
-    return {
-        "agent_id": "integration-test-agent",
-        "task": "test-integration-flow",
-        "status": "success",
-        "model": "gpt-4o-mini",
-        "total_tokens": 150,
-        "total_cost_usd": 0.002,
-        "steps": [
-            {
-                "step_type": "llm_call",
-                "model": "gpt-4o-mini",
-                "input_tokens": 100,
-                "output_tokens": 50,
-                "cost_usd": 0.002,
-                "duration_ms": 450,
-                "provider": "openai",
-            }
-        ],
-    }
-
-
-@pytest.fixture
-def sample_policy():
-    """A basic policy for testing enforcement."""
-    return {
-        "id": "integration-test-policy",
-        "name": "Integration Test Policy",
-        "description": "Policy for integration testing",
-        "autonomy_tier": "gated",
-        "tool_risks": [
-            {"tool_name": "dangerous_tool", "risk_tier": "critical", "requires_approval": True}
-        ],
-        "kill_switches": [
-            {"switch_type": "spend_usd", "limit_type": "absolute", "threshold": 10.0, "action": "halt", "enabled": True}
-        ],
-        "conditions": [
-            {"field": "tool_name", "operator": "eq", "value": "blocked_tool", "action": "deny", "reason": "Tool is blocked by policy"}
-        ],
-    }
+def openai_api_key():
+    key = os.environ.get("OPENAI_API_KEY", "")
+    if not key or key.startswith("sk-..."):
+        pytest.skip("OPENAI_API_KEY not set — skipping live LLM round-trip")
+    return key

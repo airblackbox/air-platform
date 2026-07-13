@@ -123,12 +123,12 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 <span class="arch-arrow">→</span>
 <div class="arch-node node-gateway" id="node-gateway">Gateway</div>
 <span class="arch-arrow">→</span>
-<div class="arch-node node-policy" id="node-policy">Policy Engine</div>
+<div class="arch-node node-policy" id="node-policy">AIR Gate</div>
 <span class="arch-arrow">→</span>
 <div class="arch-node node-llm" id="node-llm">LLM Provider</div>
 <div style="width:100%;display:flex;justify-content:center;gap:80px;margin-top:8px;">
 <div class="arch-node node-otel" id="node-otel">OTel Collector</div>
-<div class="arch-node node-episode" id="node-episode">Episode Store</div>
+<div class="arch-node node-episode" id="node-episode">Audit Chain</div>
 </div>
 </div>
 
@@ -287,7 +287,7 @@ async function runNormal() {
   await addPolicy('rate-limit', 'PASS', 'Request 1 of 50 in current window', 400);
   await addPolicy('budget-cap', 'PASS', '$0.03 of $5.00 budget used', 200);
   await addPolicy('tool-restriction', 'PASS', 'No restricted tool calls detected', 200);
-  await addTrace('policy', 'Policy Engine', '<span class="key">risk_tier:</span> <span class="val">low</span><br><span class="key">trust_score:</span> <span class="val">0.95</span><br><span class="key">action:</span> <span class="val">ALLOW</span>', 300);
+  await addTrace('policy', 'AIR Gate', '<span class="key">risk_tier:</span> <span class="val">low</span><br><span class="key">trust_score:</span> <span class="val">0.95</span><br><span class="key">action:</span> <span class="val">ALLOW</span>', 300);
 
   activateNode('node-llm');
   await addAgentLine('< 200 OK (847ms)', 'recv', 600);
@@ -333,7 +333,7 @@ async function runLoop() {
     if (i === 5) {
       activateNode('node-policy');
       await addPolicy('loop-detector', 'BLOCK', 'Kill switch triggered — identical request pattern 5x', 300);
-      await addTrace('policy', 'Policy Engine — BLOCKED', '<span class="key">rule:</span> <span class="val">loop-detector</span><br><span class="key">action:</span> <span style="color:#ef4444;font-weight:bold;">BLOCK</span><br><span class="key">reason:</span> <span class="val">Repeated identical requests detected</span>', 300);
+      await addTrace('policy', 'AIR Gate — BLOCKED', '<span class="key">rule:</span> <span class="val">loop-detector</span><br><span class="key">action:</span> <span style="color:#ef4444;font-weight:bold;">BLOCK</span><br><span class="key">reason:</span> <span class="val">Repeated identical requests detected</span>', 300);
       await addAgentLine('< 429 BLOCKED — Kill switch activated', 'blocked', 300);
       stats.blocked++;
       updateStats();
@@ -345,7 +345,7 @@ async function runLoop() {
     { icon: '>', text: 'Agent sent: "Check order status #4521" x5' },
     { icon: '!', text: 'OTel: Loop pattern detected at request 3' },
     { icon: '!', text: 'OTel: Kill switch triggered at request 4' },
-    { icon: 'X', text: 'Policy Engine: BLOCKED at request 5' },
+    { icon: 'X', text: 'AIR Gate: BLOCKED at request 5' },
     { icon: '$', text: 'Estimated savings: $47.00' }
   ], ['600 tokens', '$0.05 (saved ~$47)', 'KILLED', 'Risk: Critical'], 400);
 }
@@ -362,7 +362,7 @@ async function runPII() {
   activateNode('node-policy');
   await addPolicy('content-match', 'WARN', 'Payment-related content detected — risk tier elevated', 400);
   await addPolicy('rate-limit', 'PASS', 'Request 1 of 50 in window', 200);
-  await addTrace('policy', 'Policy Engine', '<span class="key">risk_tier:</span> <span class="val" style="color:#eab308;">high</span><br><span class="key">flags:</span> <span class="val">payment, PII detected</span><br><span class="key">action:</span> <span class="val">ALLOW (with PII redaction)</span>', 300);
+  await addTrace('policy', 'AIR Gate', '<span class="key">risk_tier:</span> <span class="val" style="color:#eab308;">high</span><br><span class="key">flags:</span> <span class="val">payment, PII detected</span><br><span class="key">action:</span> <span class="val">ALLOW (with PII redaction)</span>', 300);
 
   activateNode('node-llm');
   await addAgentLine('< 200 OK (1,204ms)', 'recv', 600);
@@ -395,7 +395,7 @@ async function runDangerous() {
   activateNode('node-policy');
   await addPolicy('tool-restriction', 'BLOCK', 'execute_command is in the blocked tools list', 400);
   await addPolicy('content-match', 'BLOCK', 'Destructive filesystem operation detected', 200);
-  await addTrace('policy', 'Policy Engine — BLOCKED', '<span class="key">risk_tier:</span> <span style="color:#ef4444;font-weight:bold;">critical</span><br><span class="key">rules_triggered:</span> <span class="val">tool-restriction, content-match</span><br><span class="key">action:</span> <span style="color:#ef4444;font-weight:bold;">BLOCK</span>', 300);
+  await addTrace('policy', 'AIR Gate — BLOCKED', '<span class="key">risk_tier:</span> <span style="color:#ef4444;font-weight:bold;">critical</span><br><span class="key">rules_triggered:</span> <span class="val">tool-restriction, content-match</span><br><span class="key">action:</span> <span style="color:#ef4444;font-weight:bold;">BLOCK</span>', 300);
 
   await addAgentLine('< 403 FORBIDDEN — Policy violation: restricted tool call', 'blocked', 400);
   stats.requests++; stats.blocked++; stats.tokens += 35;
