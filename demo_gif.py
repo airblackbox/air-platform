@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
 """
 Scripted air-platform demo for GIF recording.
-Shows the full stack: Gateway → Episode Store → Policy Engine → OTel Collector
+Shows the current stack: Gateway → OTel Collector → Jaeger, MinIO prompt vault.
 No Docker required — simulates the platform experience.
 """
 import time
-import json
 
 # Colors
 B = "\033[1m"
@@ -32,7 +31,7 @@ def section(title):
 print()
 p(f"  {O}{B}╔═══════════════════════════════════════════════════════╗{R}")
 p(f"  {O}{B}║  {W}AIR BLACKBOX{O}  Platform — AI Compliance Infrastructure ║{R}")
-p(f"  {O}{B}║  {R}{D}docker compose up{R}  {O}{B}                                   ║{R}")
+p(f"  {O}{B}║  {R}{D}make up{R}  {O}{B}                                             ║{R}")
 p(f"  {O}{B}╚═══════════════════════════════════════════════════════╝{R}")
 print()
 time.sleep(0.5)
@@ -41,101 +40,80 @@ time.sleep(0.5)
 section("1. Platform startup")
 
 services = [
-    ("MinIO (S3)",          "9000", "Object storage for prompt vault"),
-    ("Jaeger",              "16686", "Distributed tracing UI"),
-    ("OTel Collector",      "4317", "Redaction + cost metrics + loop detection"),
-    ("Gateway",             "8080", "OpenAI-compatible reverse proxy"),
-    ("Episode Store",       "8100", "Task-level episode grouping"),
-    ("Policy Engine",       "8200", "Risk tiers + kill switches + trust scoring"),
+    ("MinIO (S3)",     "9000",  "Encrypted prompt vault"),
+    ("Jaeger",         "16686", "Distributed tracing UI"),
+    ("OTel Collector", "4317",  "Normalize + vault + redact + metrics"),
+    ("Gateway",        "8080",  "OpenAI-compatible proxy, signed image"),
 ]
 for name, port, desc in services:
-    p(f"  {G}✓{R} {B}{name:22s}{R} {D}:{port}  — {desc}{R}")
+    p(f"  {G}✓{R} {B}{name:16s}{R} {D}:{port}  — {desc}{R}")
     time.sleep(0.15)
 
 print()
-p(f"  {G}{B}All 6 services healthy{R}  {D}(3.2s){R}")
+p(f"  {G}{B}All services healthy{R}  {D}(2.1s){R}")
 time.sleep(0.5)
-# ── 2. AGENT REQUEST THROUGH GATEWAY ────────────────────────
-section("2. Agent sends LLM request through Gateway")
+# ── 2. ONE-LINE INTEGRATION ─────────────────────────────────
+section("2. Point your agent at the gateway")
 
-p(f"  {D}POST http://localhost:8080/v1/chat/completions{R}")
-p(f"  {D}model:{R} gpt-4o")
-p(f"  {D}messages:{R} [{D}system: \"You are a recruiting assistant\"{R}]")
-p(f"  {D}tools:{R} [search_candidates, send_email, delete_records]")
+p(f"  {D}client = OpenAI({R}")
+p(f"      {D}base_url={R}{C}\"http://localhost:8080/v1\"{R}")
+p(f"  {D}){R}")
 print()
-time.sleep(0.3)
+p(f"  {G}✓{R} No SDK changes. No refactoring. {D}~3 ms overhead per call.{R}")
+time.sleep(0.5)
+# ── 3. EVERY CALL RECORDED ──────────────────────────────────
+section("3. Every LLM call becomes a signed audit record")
 
-p(f"  {C}→ Gateway intercepts{R}  {D}records OTel span{R}")
-p(f"  {C}→ Prompt Vault{R}  {D}encrypts & stores prompt + completion{R}")
-p(f"  {C}→ OTel Collector{R}  {D}extracts cost metrics{R}")
+p(f"  {D}POST /v1/chat/completions{R}  {D}model:{R} gpt-4o  {D}tools:{R} [search, send_email]")
+print()
+p(f"  {C}→ Gateway{R}      {D}records .air.json — HMAC chained to previous record{R}")
+p(f"  {C}→ Prompt Vault{R} {D}offloads prompt + completion to encrypted storage{R}")
+p(f"  {C}→ Collector{R}    {D}normalizes to gen_ai.* semconv, extracts cost{R}")
 print()
 
-# Show PII redaction
-p(f"  {Y}⚡ OTel Processor: PII detected in completion{R}")
+p(f"  {Y}⚡ genaisafe: PII detected before export{R}")
 p(f"    {Y}→{R} email: jane.doe@stripe.com  {D}→ sha256:a3f8...{R}")
-p(f"    {Y}→{R} phone: 415-555-0199        {D}→ sha256:7b2c...{R}")
-p(f"    {Y}→{R} ssn:   123-45-6789         {D}→ [REDACTED]{R}")
+p(f"    {Y}→{R} api key: sk-proj-Xk29...     {D}→ [REDACTED]{R}")
 p(f"  {G}✓{R} Redacted span forwarded to Jaeger")
 time.sleep(0.5)
-# ── 3. EPISODE STORE ────────────────────────────────────────
-section("3. Episode Store groups traces into task episodes")
+# ── 4. GUARDRAILS ───────────────────────────────────────────
+section("4. Guardrails block runaway agents at the proxy")
 
-p(f"  {D}GET http://localhost:8100/v1/episodes{R}")
+p(f"  {D}Request #6 in 40s — identical prompt{R}")
 print()
-p(f"  {B}Episode: ep-7f3a2b{R}  {D}\"Recruit senior data engineer\"{R}")
-p(f"    {D}├─{R} span 1: {C}chat.completion{R}  {D}gpt-4o  1,247 tokens  $0.018{R}")
-p(f"    {D}├─{R} span 2: {C}tool.call{R}       {D}search_candidates → 12 results{R}")
-p(f"    {D}├─{R} span 3: {C}chat.completion{R}  {D}gpt-4o  892 tokens   $0.013{R}")
-p(f"    {D}├─{R} span 4: {C}tool.call{R}       {D}send_email → GATED{R}")
-p(f"    {D}└─{R} span 5: {C}chat.completion{R}  {D}gpt-4o  341 tokens   $0.005{R}")
+p(f"  {RED}✗ loop_detection triggered{R}  {D}similar_prompt_threshold: 0.80{R}")
+p(f"    {D}action:{R} {RED}HTTP 429{R} {D}— never reaches the LLM provider{R}")
+p(f"    {D}session replay saved for incident review{R}")
 print()
-p(f"  {D}Total:{R} {B}5 spans{R}  {D}|{R}  {B}2,480 tokens{R}  {D}|{R}  {B}$0.036{R}  {D}|{R}  {B}1 gated action{R}")
+p(f"  {D}Budget guard:{R}  {G}CLEAR{R}  {D}($0.036 of $25.00 session limit){R}")
+p(f"  {D}Injection scan:{R} {G}CLEAR{R}  {D}(20 patterns, 5 attack categories){R}")
 time.sleep(0.5)
-# ── 4. POLICY ENGINE ────────────────────────────────────────
-section("4. Policy Engine evaluates episode")
+# ── 5. VERIFY + EVIDENCE ────────────────────────────────────
+section("5. Tamper-evident chain, verifiable evidence")
 
-p(f"  {D}POST http://localhost:8200/v1/evaluate{R}")
-p(f"  {D}episode:{R} ep-7f3a2b")
+p(f"  {C}$ air-blackbox replay --verify{R}")
+p(f"    {G}✓ chain valid{R}  {D}147 records · HMAC-SHA256 · ML-DSA-65 checkpoint{R}")
 print()
-p(f"  {B}Policy Evaluation:{R}")
-p(f"    {D}Risk tier:{R}      {Y}MEDIUM{R}  {D}(tool calls + outbound comms){R}")
-p(f"    {D}Trust score:{R}    {B}0.82{R}  {D}(above 0.7 threshold){R}")
-p(f"    {D}Autonomy:{R}       {G}SUPERVISED{R}  {D}(human approves gated actions){R}")
-p(f"    {D}Kill switch:{R}    {D}INACTIVE{R}")
-print()
-p(f"  {B}Action decisions:{R}")
-p(f"    {G}✓{R} search_candidates  {G}AUTO-ALLOWED{R}  {D}(read-only){R}")
-p(f"    {Y}⏳{R} send_email          {Y}PENDING{R}       {D}(requires human approval){R}")
-p(f"    {RED}✗{R} delete_records      {RED}BLOCKED{R}       {D}(policy: no AI deletes){R}")
-print()
-p(f"  {D}Loop detection:{R}   {G}CLEAR{R}  {D}(no repeated tool patterns){R}")
-p(f"  {D}Budget guard:{R}     {G}CLEAR{R}  {D}($0.036 of $5.00 limit){R}")
-time.sleep(0.5)
-# ── 5. COMPLIANCE SUMMARY ───────────────────────────────────
-section("5. EU AI Act compliance status")
-
+p(f"  {C}$ air-blackbox evidence{R}")
+p(f"    {G}✓ evidence-bundle.air-evidence{R}  {D}— auditor runs verify.py → PASS{R}")
+time.sleep(0.4)
+# ── 6. COMPLIANCE SUMMARY ───────────────────────────────────
 print(f"""
   {D}┌───────────────────────────────────────────────────────┐{R}
-  {D}│{R}  {B}AIR Blackbox — Platform Compliance Report{R}           {D}│{R}
+  {D}│{R}  {B}EU AI Act — technical evidence coverage{R}              {D}│{R}
   {D}├───────────────────────────────────────────────────────┤{R}
-  {D}│{R}                                                       {D}│{R}
-  {D}│{R}  Art. 9   Risk Management     {G}✓{R} Policy Engine        {D}│{R}
-  {D}│{R}  Art. 10  Data Governance      {G}✓{R} PII Redaction        {D}│{R}
-  {D}│{R}  Art. 11  Technical Docs       {G}✓{R} Full Call Graphs     {D}│{R}
-  {D}│{R}  Art. 12  Record-Keeping       {G}✓{R} HMAC Audit Chain     {D}│{R}
-  {D}│{R}  Art. 14  Human Oversight      {G}✓{R} ConsentGate          {D}│{R}
-  {D}│{R}  Art. 15  Robustness           {G}✓{R} Injection Detection  {D}│{R}
-  {D}│{R}                                                       {D}│{R}
-  {D}│{R}  {B}Infrastructure:{R}                                     {D}│{R}
-  {D}│{R}  Gateway           {G}✓{R}  OTel Collector    {G}✓{R}             {D}│{R}
-  {D}│{R}  Episode Store     {G}✓{R}  Prompt Vault      {G}✓{R}             {D}│{R}
-  {D}│{R}  Policy Engine     {G}✓{R}  Eval Harness      {G}✓{R}             {D}│{R}
+  {D}│{R}  Art. 9   Risk Management     {G}✓{R} Guardrails + AIR Gate {D}│{R}
+  {D}│{R}  Art. 10  Data Governance     {G}✓{R} PII Redaction + Vault {D}│{R}
+  {D}│{R}  Art. 11  Technical Docs      {G}✓{R} Full OTel Traces      {D}│{R}
+  {D}│{R}  Art. 12  Record-Keeping      {G}✓{R} HMAC Audit Chain      {D}│{R}
+  {D}│{R}  Art. 14  Human Oversight     {G}✓{R} Replay + AIR Gate     {D}│{R}
+  {D}│{R}  Art. 15  Robustness          {G}✓{R} Injection Detection   {D}│{R}
   {D}│{R}                                                       {D}│{R}
   {D}│{R}  {B}Frameworks:{R} OpenAI · LangChain · CrewAI · AutoGen   {D}│{R}
-  {D}│{R}  {B}Deadline:{R}   {Y}August 2, 2026{R}  {D}(487 days){R}              {D}│{R}
+  {D}│{R}              Claude · Google ADK · Haystack           {D}│{R}
   {D}└───────────────────────────────────────────────────────┘{R}
 """)
-time.sleep(0.5)
+time.sleep(0.4)
 
 # ── NEXT STEPS ──────────────────────────────────────────────
 p(f"  {B}Get started:{R}")
