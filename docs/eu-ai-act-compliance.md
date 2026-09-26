@@ -2,11 +2,11 @@
 
 ## The Problem
 
-The EU AI Act enters enforcement for **high-risk AI systems on August 2, 2026**. Companies deploying AI agents — tool-calling LLMs that take actions autonomously — face mandatory requirements around logging, transparency, human oversight, and data governance.
+The EU AI Act's obligations for **high-risk AI systems were scheduled to apply from August 2, 2026**. Companies deploying AI agents — tool-calling LLMs that take actions autonomously — face mandatory requirements around logging, transparency, human oversight, and data governance.
 
 Most compliance platforms target CISOs with top-down dashboards. **Nobody is giving developers the building blocks to make their agents audit-ready by default.**
 
-> **Note**: The European Commission's Digital Omnibus proposal (late 2025) could postpone Annex III high-risk obligations to December 2027, but formal adoption is pending. Prudent compliance planning treats August 2, 2026 as the binding deadline. Penalties: up to €35M or 7% of worldwide turnover for prohibited practices, up to €15M or 3% for other infringements.
+> **Note**: The European Commission's Digital Omnibus proposal (late 2025) would postpone Annex III high-risk obligations to December 2027. Check the current official timeline before relying on either date. Penalties: up to €35M or 7% of worldwide turnover for prohibited practices, up to €15M or 3% for other infringements.
 
 AIR Blackbox is the compliance infrastructure layer for AI agents: a gateway proxy, audit chain, scanner, and framework trust layers that produce the technical evidence the Act requires. It checks technical requirements — it is a linter for AI governance, not a legal tool.
 
@@ -55,7 +55,7 @@ AIR Blackbox is the compliance infrastructure layer for AI agents: a gateway pro
 |---|---|---|
 | Recording of the period of each use | **Timestamped `.air.json` records** for every proxied call, written asynchronously | Gateway recorder |
 | Automatic recording over the system lifetime | **Zero-code capture** — one base_url swap, every call recorded | Gateway proxy |
-| Logs available for audit | **Evidence bundles** — self-verifying `.air-evidence` ZIP; auditors run `python verify.py`, no pip install needed | `air-blackbox evidence` |
+| Logs available for audit | **Evidence bundles** — self-verifying evidence ZIP; auditors run `python verify.py`, no pip install needed | `air-blackbox export --format evidence` |
 | Integrity of recorded events | **HMAC-SHA256 chain + ML-DSA-65 (FIPS 204) signed checkpoints** — post-quantum secure, Rekor transparency-log anchoring | Gateway trust layer |
 
 **Key differentiator**: AIR Blackbox records are **tamper-evident**. Each record's hash includes the previous record's hash — modify one record and every record after it breaks. Checkpoints are signed with ML-DSA-65 and anchored to a public transparency log. Regulators can mathematically verify the logs weren't modified after an incident.
@@ -124,7 +124,7 @@ All trust layers ship inside the main [`air-blackbox`](https://pypi.org/project/
 
 4. **Multi-framework from day one** — seven framework trust layers, an OTel processor pipeline, an HTTP gateway, and an MCP server. Competitors lock you into one ecosystem.
 
-5. **August 2, 2026 deadline** — weeks away. Every company deploying high-risk AI agents needs technical evidence. The infrastructure layer they need is here.
+5. **Built for the high-risk deadline** — whether obligations apply from August 2, 2026 or later under the Digital Omnibus, every company deploying high-risk AI agents needs technical evidence. The infrastructure layer they need is here.
 
 ---
 

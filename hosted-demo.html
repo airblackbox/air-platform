@@ -437,10 +437,10 @@ function scenario4() { return run('s4', 's5', async () => {
 function scenario5() { return run('s5', null, async () => {
   await verifyChain(true);
   await sleep(500);
-  await tcmd('air-blackbox evidence');
+  await tcmd('air-blackbox export --format evidence');
   await tline(`  <span class="d">packaging audit chain + scan results + signatures…</span>`, 600);
-  await tline(`  <span class="g">✔ evidence-bundle.air-evidence</span> <span class="d">— self-verifying ZIP</span>`, 250);
-  await tline(`  <span class="d">your auditor runs</span> <span class="c">python verify.py</span> <span class="d">→</span> <span class="g">PASS</span> <span class="d">in ~2s, no dependencies</span>`, 250);
+  await tline(`  <span class="g">✔ air-evidence-20260926.zip</span> <span class="d">— self-verifying ZIP</span>`, 250);
+  await tline(`  <span class="d">your auditor runs</span> <span class="c">python verify.py --key …</span> <span class="d">→</span> <span class="g">PASS</span> <span class="d">in ~2s, no dependencies</span>`, 250);
   await tline(`\n  <span class="y">Now try the ✂ tamper button on the chain panel →</span>`);
 }); }
 </script>

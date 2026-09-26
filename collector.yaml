@@ -47,7 +47,8 @@ processors:
     redact:
       mode: hash_and_preview
       preview_chars: 48
-      salt: air-demo-salt
+      # Secret salt, injected by collector-entrypoint.sh (never commit a real one).
+      salt: ${env:GENAISAFE_SALT}
       keys:
         - gen_ai.prompt
         - gen_ai.completion

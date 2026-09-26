@@ -36,7 +36,7 @@ The gateway ships as a prebuilt, signed image from GHCR (with SLSA build provena
 
 ## The Problem
 
-The EU AI Act enforcement date for high-risk AI systems is **August 2, 2026**. Companies deploying AI agents — tool-calling LLMs that act autonomously — face mandatory requirements around logging, transparency, human oversight, and data governance. Penalties reach €35M or 7% of global turnover.
+The EU AI Act's obligations for high-risk AI systems were scheduled to apply from **August 2, 2026**; the Commission's Digital Omnibus proposal would move some of them later, so check the current official timeline for your system. Companies deploying AI agents — tool-calling LLMs that act autonomously — face mandatory requirements around logging, transparency, human oversight, and data governance. Penalties reach €35M or 7% of global turnover.
 
 Most compliance platforms target CISOs with top-down dashboards. AIR Blackbox gives developers the building blocks to make agents audit-ready by default.
 
@@ -58,7 +58,7 @@ client = OpenAI(base_url="http://localhost:8080/v1")
 
 Every LLM call now produces an HMAC-SHA256 chained, replayable audit record in `./runs/`, plus an OpenTelemetry trace you can inspect in Jaeger at [localhost:16686](http://localhost:16686).
 
-**Ports**
+**Ports** (bound to `127.0.0.1`, so only your machine can reach them)
 
 | Port | Service |
 |---|---|
@@ -131,7 +131,7 @@ The scanner runs against any Python AI project — no stack required:
 pip install air-blackbox
 air-blackbox comply --scan . -v     # gap analysis: Articles 9–15
 air-blackbox replay                 # replay recorded episodes
-air-blackbox evidence               # signed evidence bundle for auditors
+air-blackbox export --format evidence   # self-verifying evidence ZIP for auditors
 ```
 
 ## Testing
@@ -143,7 +143,7 @@ make up
 make test    # 6 health/audit tests; +1 live LLM round-trip when OPENAI_API_KEY is set
 ```
 
-If the stack isn't running, the suite skips with instructions instead of failing. CI boots the full compose stack and runs the same tests on every push.
+The tests read `.env` too, so a `GATEWAY_KEY` or `OPENAI_API_KEY` you set there is used automatically. If the stack isn't running, the suite skips with instructions instead of failing. CI boots the full compose stack and runs the same tests on every push.
 
 ## Threat Model
 

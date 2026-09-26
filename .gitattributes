@@ -1,2 +1,5 @@
 # Tell GitHub linguist to ignore HTML demo files for language detection
 *.html linguist-documentation
+
+# Shell scripts run inside Linux containers: keep LF endings even on Windows
+*.sh text eol=lf
