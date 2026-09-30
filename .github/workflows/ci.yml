@@ -40,7 +40,22 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Start the stack
-        run: docker compose up -d --quiet-pull
+        # The collector is built from source and downloads Go modules at build
+        # time, so a transient network error (a dropped connection to
+        # sum.golang.org, a registry hiccup) can fail the build through no
+        # fault of this repo. Retry a couple of times before giving up.
+        run: |
+          for attempt in 1 2 3; do
+            if docker compose up -d --quiet-pull; then
+              exit 0
+            fi
+            echo "::warning::docker compose up failed (attempt $attempt of 3)"
+            if [ "$attempt" -lt 3 ]; then
+              sleep 30
+            fi
+          done
+          echo "Stack failed to start after 3 attempts" >&2
+          exit 1
 
       - name: Wait for gateway health
         run: |
