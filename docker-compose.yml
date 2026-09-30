@@ -11,7 +11,8 @@
 #   docker compose up -d
 #   docker compose down -v
 #
-# Ports:
+# Ports (bound to 127.0.0.1, so only this machine can reach them — change
+# "127.0.0.1:PORT:PORT" to "PORT:PORT" if you deliberately want LAN access):
 #   8080  — AIR Gateway (OpenAI-compatible proxy: /v1/chat/completions, /health,
 #           /v1/audit, /v1/analytics)
 #   9000  — MinIO S3 API (prompt vault)
@@ -23,11 +24,14 @@
 services:
   # --- Infrastructure ---
   minio:
-    image: minio/minio:latest
+    # MinIO no longer publishes images to Docker Hub (minio/minio and minio/mc
+    # were removed). Chainguard builds MinIO from source and keeps it updated;
+    # the image includes `mc`, which the healthcheck below uses.
+    image: chainguard/minio:latest
     command: server /data --console-address ":9001"
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9001:9001"
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
@@ -40,22 +44,11 @@ services:
       retries: 10
       start_period: 5s
 
-  minio-init:
-    image: minio/mc:latest
-    depends_on:
-      minio:
-        condition: service_healthy
-    entrypoint: ["/bin/sh", "-c"]
-    command: >
-      "mc alias set local http://minio:9000 ${MINIO_ROOT_USER:-minioadmin} ${MINIO_ROOT_PASSWORD:-minioadmin} &&
-       mc mb -p local/air-runs || true &&
-       echo 'MinIO bucket ready'"
-
   jaeger:
     image: jaegertracing/all-in-one:1.57
     ports:
-      - "16686:16686"
-      - "14250:14250"
+      - "127.0.0.1:16686:16686"
+      - "127.0.0.1:14250:14250"
     environment:
       COLLECTOR_OTLP_ENABLED: "true"
 
@@ -63,7 +56,7 @@ services:
   gateway:
     image: ghcr.io/airblackbox/airblackbox:latest
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
     environment:
       LISTEN_ADDR: ":8080"
       PROVIDER_URL: ${PROVIDER_URL:-https://api.openai.com}
@@ -79,14 +72,19 @@ services:
       # .air-signing-key inside RUNS_DIR (survives restarts via the volume).
       TRUST_SIGNING_KEY: ${TRUST_SIGNING_KEY:-}
       GATEWAY_KEY: ${GATEWAY_KEY:-}
+      # Optional: Slack-style webhook for guardrail alerts (overrides
+      # alerts.webhook_url in guardrails.yaml).
+      WEBHOOK_URL: ${WEBHOOK_URL:-}
     volumes:
       - ./runs:/data/runs
       - ./guardrails.yaml:/app/guardrails.yaml:ro
-    # No depends_on for minio: the gateway starts and proxies even if the
-    # vault is temporarily unreachable — it can never block your AI system.
+    # The gateway connects to the vault once, at startup, and creates the
+    # air-runs bucket itself. Waiting for MinIO to be healthy means the vault
+    # is actually enabled. If the vault goes down later, the gateway keeps
+    # proxying — it never blocks your AI system.
     depends_on:
-      minio-init:
-        condition: service_completed_successfully
+      minio:
+        condition: service_healthy
       collector:
         condition: service_started
 
@@ -94,13 +92,18 @@ services:
     build:
       context: https://github.com/airblackbox/airblackbox.git#main:collector
       dockerfile: Dockerfile
+    # Wrapper script gives the PII redactor a secret salt (see the script).
+    entrypoint: ["/bin/sh", "/etc/otel/entrypoint.sh"]
     ports:
-      - "4317:4317"
-      - "4318:4318"
+      - "127.0.0.1:4317:4317"
+      - "127.0.0.1:4318:4318"
+    environment:
+      GENAISAFE_SALT: ${GENAISAFE_SALT:-}
     volumes:
       - vault-data:/data/vault
       # Local pipeline config (overrides the image's baked-in config)
       - ./collector.yaml:/etc/otel/collector.yaml:ro
+      - ./collector-entrypoint.sh:/etc/otel/entrypoint.sh:ro
     depends_on:
       - jaeger
 

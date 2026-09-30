@@ -12,5 +12,11 @@ dependencies = [
     "pytest>=7.4.0",
 ]
 
+# This repo is Docker Compose orchestration plus integration tests, not a
+# library. Nothing gets packaged: `pip install .` only pulls in the test deps.
+[tool.setuptools]
+packages = []
+py-modules = []
+
 [tool.pytest.ini_options]
 pythonpath = ["."]

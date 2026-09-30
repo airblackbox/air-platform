@@ -4,6 +4,32 @@ All notable changes to **AIR Platform** will be documented in this file.
 
 This project adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Fixed
+- `make up` failed on a fresh machine: MinIO removed `minio/minio` and `minio/mc`
+  from Docker Hub. The vault now uses `chainguard/minio`, and the `minio-init`
+  container is gone (the gateway creates its own bucket). The gateway now waits
+  for MinIO to be healthy so the vault is actually enabled.
+- Docs and demos referenced a nonexistent `air-blackbox evidence` command; the
+  real command is `air-blackbox export --format evidence`.
+- `make test` failed with 401s when `GATEWAY_KEY` was set in `.env`, as
+  `.env.example` suggests. Tests now read `.env`.
+- The live round-trip test could race the gateway's background audit write; it
+  now polls `chain_length` for up to 15 seconds.
+
+### Security
+- All published ports are bound to `127.0.0.1` instead of every interface.
+- The PII-redaction salt is no longer hardcoded in `collector.yaml`. It comes from
+  `GENAISAFE_SALT`, or is generated once per install and kept in the collector volume.
+
+### Changed
+- CI also runs weekly (and on demand) to catch upstream image drift, and lints
+  with ruff.
+- `WEBHOOK_URL` is passed through to the gateway for guardrail alerts.
+- `pip install .` no longer installs `demo_gif.py` as a module.
+- Refreshed EU AI Act dates and marked the February 2026 test report as archived.
+
 ## [0.2.0] — 2026-07-13
 
 ### Changed

@@ -5,6 +5,11 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  # Weekly run catches upstream drift (removed images, broken :latest tags)
+  # even when nobody pushes to this repo.
+  schedule:
+    - cron: "17 6 * * 1"
+  workflow_dispatch:
 
 jobs:
   validate:
@@ -20,8 +25,13 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Lint test files
-        run: python -m py_compile tests/*.py
+      - name: Lint Python files
+        run: |
+          pip install ruff==0.16.9
+          ruff check tests/ demo_gif.py
+
+      - name: Check collector entrypoint script
+        run: sh -n collector-entrypoint.sh
 
   integration:
     runs-on: ubuntu-latest

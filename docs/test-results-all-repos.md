@@ -1,5 +1,12 @@
 # AIR Blackbox — Full Test Suite Results
 
+> **Archived snapshot (February 2026).** This report covers the retired multi-repo
+> architecture (Episode Store, Policy Engine, Eval Harness, and the standalone
+> trust-* repos), most of which are now archived or merged into
+> [airblackbox](https://github.com/airblackbox/airblackbox). It does not describe
+> the current stack. For current results, see this repo's
+> [CI runs](https://github.com/airblackbox/air-platform/actions).
+
 **Date:** February 23, 2026
 **Repos tested:** 21 of 22 (`.github` is org profile, no code)
 **Total tests:** 697 unit tests + 18 live integration tests
